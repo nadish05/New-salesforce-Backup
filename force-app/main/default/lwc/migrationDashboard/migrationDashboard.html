@@ -1,0 +1,910 @@
+<template>
+    <div class="page-container">
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PHASE 1 — GLOBAL WORKSPACE HEADER                              -->
+        <!-- Replaces: view-header + ctrl-bar (both removed from sub-views) -->
+        <!-- Check Backend moved here from Backup view                      -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <header class="ws-header">
+
+            <div class="ws-header-brand">
+                <div class="ws-brand-mark"></div>
+                <div class="ws-brand-text">
+                    <span class="ws-brand-title">Metadata Comparison Platform</span>
+                    <span class="ws-brand-sub">Org Consolidation Workspace</span>
+                </div>
+            </div>
+
+            <!-- Comparison selector — only shown in comparison view -->
+            <template if:true={isComparisonView}>
+                <div class="ws-header-selector">
+                    <lightning-combobox
+                        label=""
+                        variant="label-hidden"
+                        value={selectedComparison}
+                        options={comparisonOptions}
+                        onchange={handleComparisonSelect}
+                        placeholder="Select a comparison...">
+                    </lightning-combobox>
+                </div>
+            </template>
+
+            <div class="ws-header-actions">
+                <!-- Comparison actions — only in comparison view -->
+                <template if:true={isComparisonView}>
+                    <lightning-button
+                        label="New Comparison"
+                        variant="brand"
+                        onclick={openNewComparisonModal}>
+                    </lightning-button>
+                    <lightning-button
+                        label="Connect Org"
+                        variant="neutral"
+                        onclick={openConnectOrgModal}>
+                    </lightning-button>
+                </template>
+
+                <!-- Check Backend — always visible, moved from Backup view -->
+                <div class="ws-backend-cluster">
+                    <lightning-button
+                        label="Check Backend"
+                        variant="neutral"
+                        onclick={checkConnection}>
+                    </lightning-button>
+                    <template if:true={backendStatus}>
+                        <span class="ws-backend-pill">{backendStatus}</span>
+                    </template>
+                </div>
+            </div>
+
+        </header>
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PHASE 1 — WORKSPACE NAV TABS                                   -->
+        <!-- Default: Comparison. Backup accessible via tab.                -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <nav class="ws-nav">
+            <button
+                class={comparisonTabClass}
+                onclick={goToComparison}>
+                Metadata Comparison
+            </button>
+           <!-- <button 
+                class={backupTabClass}
+                onclick={goToBackup}>
+                Org Metadata Backup
+            </button> -->
+        </nav>
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- BACKUP VIEW — unchanged content, no header/back-btn            -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <template if:true={isBackupView}>
+            <div class="view-body">
+
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <span class="section-card-title">Connect New Org</span>
+                    </div>
+                    <div class="section-card-body">
+                        <div class="form-grid">
+                            <lightning-input label="Connected Org Name" value={orgDisplayName} onchange={handleOrgDisplayNameChange}></lightning-input>
+                            <lightning-combobox label="Environment" value={environment} options={environmentOptions} onchange={handleEnvironmentChange}></lightning-combobox>
+                        </div>
+                        <div class="form-actions">
+                            <lightning-button label="Connect New Org" variant="brand" onclick={connectNewOrg}></lightning-button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <span class="section-card-title">Start Backup</span>
+                    </div>
+                    <div class="section-card-body">
+                        <div class="form-grid">
+                            <lightning-combobox label="Connected Org" value={selectedOrg} options={orgOptions} onchange={handleOrgChange}></lightning-combobox>
+                            <lightning-input label="GitHub Repository URL" value={githubUrl} onchange={handleGithubRepoChange}></lightning-input>
+                        </div>
+                        <div class="form-actions">
+                            <lightning-button label="Start Migration" variant="success" onclick={handleStartMigration}></lightning-button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </template>
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- COMPARISON WORKSPACE                                            -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <template if:true={isComparisonView}>
+            <div class="view-body">
+
+
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- PHASE 2 — ORG CONSOLIDATION LIFECYCLE RAIL             -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <section class="lifecycle-rail">
+                    <div class="lifecycle-rail-label">Org Consolidation Lifecycle</div>
+
+                    <div class="lifecycle-stages">
+
+                        <!-- Stage 1: Org Connection -->
+                        <button
+                            class={stage1Class}
+                            onclick={openStage1Modal}
+                            disabled={stage1Disabled}
+                            title="Org Connection">
+                            <span class="lc-node-number">1</span>
+                            <span class="lc-node-icon">🔗</span>
+                            <span class="lc-node-label">Org Connection</span>
+                            <span class={stage1StatusClass}>{stage1StatusLabel}</span>
+                        </button>
+
+                        <div class={connector1Class}></div>
+
+                        <!-- Stage 2: Metadata Retrieval -->
+                        <button
+                            class={stage2Class}
+                            onclick={openStage2Modal}
+                            disabled={stage2Disabled}
+                            title="Metadata Retrieval">
+                            <span class="lc-node-number">2</span>
+                            <span class="lc-node-icon">📥</span>
+                            <span class="lc-node-label">Metadata Retrieval</span>
+                            <span class={stage2StatusClass}>{stage2StatusLabel}</span>
+                        </button>
+
+                        <div class={connector2Class}></div>
+
+                        <!-- Stage 3: Metadata Comparison -->
+                        <button
+                            class={stage3Class}
+                            onclick={openStage3Modal}
+                            disabled={stage3Disabled}
+                            title="Metadata Comparison">
+                            <span class="lc-node-number">3</span>
+                            <span class="lc-node-icon">⚖️</span>
+                            <span class="lc-node-label">Metadata Comparison</span>
+                            <span class={stage3StatusClass}>{stage3StatusLabel}</span>
+                        </button>
+
+                        <div class="lc-connector lc-connector--dim"></div>
+
+                        <!-- Stage 4: Dependency Review (Coming Soon) -->
+                        <div class="lc-node lc-node--soon" title="Coming Soon">
+                            <span class="lc-node-number">4</span>
+                            <span class="lc-node-icon">🔍</span>
+                            <span class="lc-node-label">Dependency Review</span>
+                            <span class="lc-node-status lc-status--soon">Coming Soon</span>
+                        </div>
+
+                        <div class="lc-connector lc-connector--dim"></div>
+
+                        <!-- Stage 5: Deployment Planning (Coming Soon) -->
+                        <div class="lc-node lc-node--soon" title="Coming Soon">
+                            <span class="lc-node-number">5</span>
+                            <span class="lc-node-icon">📋</span>
+                            <span class="lc-node-label">Deployment Planning</span>
+                            <span class="lc-node-status lc-status--soon">Coming Soon</span>
+                        </div>
+
+                        <div class="lc-connector lc-connector--dim"></div>
+
+                        <!-- Stage 6: Deployment Execution (Coming Soon) -->
+                        <div class="lc-node lc-node--soon" title="Coming Soon">
+                            <span class="lc-node-number">6</span>
+                            <span class="lc-node-icon">🚀</span>
+                            <span class="lc-node-label">Deployment Execution</span>
+                            <span class="lc-node-status lc-status--soon">Coming Soon</span>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!-- EMPTY STATE — no comparison selected                   -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <template if:false={selectedComparisonDetails}>
+                    <div class="empty-state-card">
+                        <div class="empty-state-icon">⚖️</div>
+                        <div class="empty-state-title">No Comparison Selected</div>
+                        <div class="empty-state-body">
+                            Choose an existing comparison from the dropdown above, or create a new one to get started.
+                        </div>
+                    </div>
+                </template>
+
+
+                <!-- ══════════════════════════════════════════════════════ -->
+                <!-- DASHBOARD CONTENT — loaded after comparison selected   -->
+                <!-- ══════════════════════════════════════════════════════ -->
+                <template if:true={selectedComparisonDetails}>
+
+                    <!-- ── Comparison Overview Card ── -->
+                    <div class="cmp-header-card">
+                        <div class="cmp-header-left">
+                            <div class="cmp-header-name">{selectedComparisonDetails.Name}</div>
+                            <div class="cmp-header-orgs">
+                                <span class="cmp-org-chip source-chip">{sourceOrgName}</span>
+                                <span class="cmp-arrow">→</span>
+                                <span class="cmp-org-chip dest-chip">{destinationOrgName}</span>
+                            </div>
+                        </div>
+                        <div class="cmp-header-right">
+                            <div class="cmp-kpi-item">
+                                <div class="cmp-kpi-value">{totalDiffCount}</div>
+                                <div class="cmp-kpi-label">Total Differences</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── KPI Cards ── -->
+                    <template if:true={groupedComparisonResults}>
+                        <div class="kpi-grid">
+                            <div class="kpi-card kpi-added">
+                                <div class="kpi-card-count">{kpiAdded}</div>
+                                <div class="kpi-card-label">Added</div>
+                                <div class="kpi-card-sub">In Source Only</div>
+                            </div>
+                            <div class="kpi-card kpi-modified">
+                                <div class="kpi-card-count">{kpiModified}</div>
+                                <div class="kpi-card-label">Modified</div>
+                                <div class="kpi-card-sub">Content Differs</div>
+                            </div>
+                            <div class="kpi-card kpi-deleted">
+                                <div class="kpi-card-count">{kpiDeleted}</div>
+                                <div class="kpi-card-label">Missing</div>
+                                <div class="kpi-card-sub">In Destination Only</div>
+                            </div>
+                            <div class="kpi-card kpi-total">
+                                <div class="kpi-card-count">{savedComparisonResults.length}</div>
+                                <div class="kpi-card-label">Total Files</div>
+                                <div class="kpi-card-sub">Scanned</div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- ── AI Summary (shown in Zone C when available) ── -->
+                    <template if:true={aiSummary}>
+                        <lightning-card title="AI Comparison Summary" icon-name="utility:einstein">
+                            <div class="ai-header">
+                                <div class="ai-provider-badge">🤖 Generated by {aiProviderName}</div>
+                                <lightning-icon icon-name="utility:einstein" size="small"></lightning-icon>
+                            </div>
+                            <div class="slds-p-around_medium">
+                                <div class="ai-summary-card">
+                                    <lightning-formatted-rich-text value={formattedAiSummary}></lightning-formatted-rich-text>
+                                </div>
+                            </div>
+                        </lightning-card>
+                    </template>
+
+                    <template if:true={isGeneratingSummary}>
+                        <lightning-spinner alternative-text="Generating Summary"></lightning-spinner>
+                    </template>
+
+                    <!-- ── Comparison Summary Accordion ── -->
+                    <div class="section-card results-section-card">
+
+                        <div class="section-card-header results-card-header">
+                            <span class="section-card-title">Comparison Summary</span>
+                            <span class="results-count-badge">{savedComparisonResults.length} files</span>
+                        </div>
+
+                        <div class="section-card-body no-pad">
+
+                            <!-- Search toolbar -->
+                            <div class="results-toolbar slds-p-around_small">
+                                <lightning-input
+                                    type="search"
+                                    label="Search Files"
+                                    placeholder="Search by file name..."
+                                    value={searchKeyword}
+                                    onchange={handleSearch}>
+                                </lightning-input>
+                            </div>
+
+                            <template for:each={groupedComparisonResults} for:item="group">
+                                <div key={group.type} class="group-row">
+
+                                    <div class="group-header" data-type={group.type} onclick={toggleGroup}>
+                                        <span class="group-toggle-icon">
+                                            <template if:true={group.expanded}>▼</template>
+                                            <template if:false={group.expanded}>▶</template>
+                                        </span>
+                                        <span class="group-type-label">{group.type}</span>
+                                        <span class="group-count-badge">{group.count}</span>
+                                    </div>
+
+                                    <template if:true={group.expanded}>
+                                        <div class="group-files">
+                                            <template for:each={group.files} for:item="file">
+                                                <div key={file.Id} class="file-item" data-id={file.Id} onclick={handleFileClick}>
+                                                    <span class="file-name">{file.File_Name__c}</span>
+                                                    <span class={file.badgeClass}>{file.Change_Type__c}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                </div>
+                            </template>
+
+                        </div>
+                    </div>
+
+                    <!-- Diff Loading -->
+                    <template if:true={isLoadingDiff}>
+                        <div class="spinner-container">
+                            <lightning-spinner alternative-text="Loading Difference Report" size="medium"></lightning-spinner>
+                        </div>
+                    </template>
+
+                </template>
+                <!-- /selectedComparisonDetails -->
+
+            </div>
+        </template>
+        <!-- /isComparisonView -->
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PHASE 2 — STAGE 1 MODAL: ORG CONNECTION                        -->
+        <!-- Read-only. Uses only: selectedComparisonDetails, sourceOrgName, -->
+        <!-- destinationOrgName, sourceStatusMessage, destinationStatusMessage,-->
+        <!-- sourceBranch, destinationBranch. No new Apex.                  -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <template if:true={isStage1ModalOpen}>
+            <section role="dialog" tabindex="-1" aria-label="Org Connection" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container modal-premium">
+
+                    <header class="slds-modal__header modal-header-brand">
+                        <button
+                            class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close"
+                            onclick={closeStage1Modal}>
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="small"></lightning-icon>
+                        </button>
+                        <div class="modal-header-icon">🔗</div>
+                        <h2 class="slds-text-heading_medium modal-header-title">Org Connection</h2>
+                        <p class="modal-header-sub">Stage 1 — Connected org details for this comparison</p>
+                    </header>
+
+                    <div class="slds-modal__content modal-body-padded">
+                        <template if:true={selectedComparisonDetails}>
+
+                            <div class="stage-info-grid">
+
+                                <div class="stage-info-panel stage-info-source">
+                                    <div class="stage-info-badge source-badge">SOURCE ORG</div>
+                                    <div class="org-status-chip chip-success">✓ Active</div>
+                                    <div class="stage-info-name">{sourceOrgName}</div>
+                                    
+                                    <div class="stage-info-row">
+                                        <span class="stage-info-label">Branch</span>
+                                        <span class="stage-info-value-branch">{sourceBranch}</span>
+                                    </div>
+                                    <div class="stage-info-row">
+                                        <span class="stage-info-label">Status</span>
+                                        <span class="stage-info-value-status">{sourceStatusMessage}</span>
+                                    </div>
+                                </div>
+
+                                <div class="stage-info-panel stage-info-dest">
+                                    <div class="stage-info-badge destination-badge">DESTINATION ORG</div>
+                                    <div class="org-status-chip chip-success">✓ Active</div>
+                                    <div class="stage-info-name">{destinationOrgName}</div>
+                                    <div class="stage-info-row">
+                                        <span class="stage-info-label">Branch</span>
+                                        <span class="stage-info-value-branch">{destinationBranch}</span>
+                                    </div>
+                                    <div class="stage-info-row">
+                                        <span class="stage-info-label">Status</span>
+                                        <span class="stage-info-value-status">{destinationStatusMessage}</span>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="stage-info-hint">
+                                To connect a new org, use the <strong>Connect Org</strong> button in the workspace header.
+                            </div>
+
+                        </template>
+                        <template if:false={selectedComparisonDetails}>
+                            <p>Select a comparison to view org connection details.</p>
+                        </template>
+                    </div>
+
+                    <footer class="slds-modal__footer modal-footer-clean">
+                        <lightning-button label="Close" onclick={closeStage1Modal}></lightning-button>
+                    </footer>
+
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PHASE 3 — STAGE 2 MODAL: METADATA RETRIEVAL                    -->
+        <!-- Moved from inline comparison view. No logic changes.           -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <template if:true={isStage2ModalOpen}>
+            <section role="dialog" tabindex="-1" aria-label="Metadata Retrieval" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container modal-wide">
+
+                    <header class="slds-modal__header modal-header-brand">
+                        <button
+                            class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close"
+                            onclick={closeStage2Modal}>
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="small"></lightning-icon>
+                        </button>
+                        <div class="modal-header-icon">📥</div>
+                        <h2 class="slds-text-heading_medium modal-header-title">Metadata Retrieval</h2>
+                        <p class="modal-header-sub">Stage 2 — Push metadata from each org to its GitHub branch</p>
+                    </header>
+
+                    <div class="slds-modal__content modal-body-padded">
+
+                        <!-- Source + Destination Panels — moved verbatim from inline view -->
+                        <div class="results-orgs-grid">
+
+                            <!-- Source Org -->
+                            <div class="comparison-panel source-panel">
+                                <div class="org-panel-header">
+                                    <div class="org-badge source-badge">SOURCE ORG</div>
+                                    <template if:true={sourceMigrationCompleted}>
+                                        <div class="org-status-chip chip-success">✓ Synced</div>
+                                    </template>
+                                    <template if:false={sourceMigrationCompleted}>
+                                        <div class="org-status-chip chip-pending">Pending</div>
+                                    </template>
+                                </div>
+                                <div class="org-name">{sourceOrgName}</div>
+                                <lightning-input
+                                    label="Branch Name"
+                                    value={sourceBranch}
+                                    onchange={handleSourceBranchChange}
+                                    disabled={sourceMigrationCompleted}>
+                                </lightning-input>
+                                <template if:true={sourceStatusMessage}>
+                                    <div class="migration-status-pill status-success-pill">
+                                        ✓ {sourceStatusMessage}
+                                    </div>
+                                </template>
+                                <div class="form-actions">
+                                    <lightning-button
+                                        label="Start Retrieval"
+                                        variant="brand"
+                                        onclick={handleSourceMigration}
+                                        disabled={disableSourceButton}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+
+                            <!-- Destination Org -->
+                            <div class="comparison-panel destination-panel">
+                                <div class="org-panel-header">
+                                    <div class="org-badge destination-badge">DESTINATION ORG</div>
+                                    <template if:true={destinationMigrationCompleted}>
+                                        <div class="org-status-chip chip-success">✓ Synced</div>
+                                    </template>
+                                    <template if:false={destinationMigrationCompleted}>
+                                        <div class="org-status-chip chip-pending">Pending</div>
+                                    </template>
+                                </div>
+                                <div class="org-name">{destinationOrgName}</div>
+                                <lightning-input
+                                    label="Branch Name"
+                                    value={destinationBranch}
+                                    onchange={handleDestinationBranchChange}
+                                    disabled={destinationMigrationCompleted}>
+                                </lightning-input>
+                                <template if:true={destinationStatusMessage}>
+                                    <div class="migration-status-pill status-success-pill">
+                                        ✓ {destinationStatusMessage}
+                                    </div>
+                                </template>
+                                <div class="form-actions">
+                                    <lightning-button
+                                        label="Start Retrieval"
+                                        variant="brand"
+                                        onclick={handleDestinationMigration}
+                                        disabled={disableDestinationButton}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <footer class="slds-modal__footer modal-footer-clean">
+                        <lightning-button label="Close" onclick={closeStage2Modal}></lightning-button>
+                    </footer>
+
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PHASE 3 — STAGE 3 MODAL: METADATA COMPARISON ACTIONS ONLY     -->
+        <!-- Compare button + AI model + Generate AI Summary + spinner.     -->
+        <!-- Results remain in Zone C. No duplication.                      -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <template if:true={isStage3ModalOpen}>
+            <section role="dialog" tabindex="-1" aria-label="Metadata Comparison" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container modal-premium">
+
+                    <header class="slds-modal__header modal-header-brand">
+                        <button
+                            class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close"
+                            onclick={closeStage3Modal}>
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="small"></lightning-icon>
+                        </button>
+                        <div class="modal-header-icon">⚖️</div>
+                        <h2 class="slds-text-heading_medium modal-header-title">Metadata Comparison</h2>
+                        <p class="modal-header-sub">Stage 3 — Compare branches and generate AI summary</p>
+                    </header>
+
+                    <div class="slds-modal__content modal-body-padded">
+
+                        <!-- Compare + AI action bar — moved verbatim from inline view -->
+                        <template if:true={showCompareButton}>
+                            <div class="compare-action-bar">
+
+                                <div class="compare-row">
+                                    <lightning-button
+                                        label="Compare Metadata"
+                                        variant="success"
+                                        onclick={handleCompare}
+                                        disabled={compareCompleted}>
+                                    </lightning-button>
+                                </div>
+
+                            </br>
+
+                                <div class="ai-row">
+                                    <span class="ai-label">AI Model:</span>
+                                    <lightning-combobox
+                                        class="model-dropdown"
+                                        variant="label-hidden"
+                                        value={selectedModel}
+                                        options={modelOptions}
+                                        onchange={handleModelChange}>
+                                    </lightning-combobox>
+                                    <lightning-button
+                                        label="Generate AI Summary"
+                                        variant="brand"
+                                        onclick={generateAISummary}>
+                                    </lightning-button>
+                                </div>
+
+                            </div>
+                        </template>
+
+                        <!-- Not-ready hint when retrieval incomplete -->
+                        <template if:false={showCompareButton}>
+                            <div class="stage-info-hint">
+                                Complete <strong>Stage 2 — Metadata Retrieval</strong> for both orgs before running a comparison.
+                            </div>
+                        </template>
+
+                        <!-- Comparing Spinner -->
+                        <template if:true={isComparing}>
+                            <div class="spinner-container">
+                                <lightning-spinner alternative-text="Comparing Metadata" size="medium"></lightning-spinner>
+                                <p class="spinner-label">Comparing branches...</p>
+                            </div>
+                        </template>
+
+                        <!-- Completed state hint -->
+                        <template if:true={compareCompleted}>
+                            <div class="stage-complete-hint">
+                                ✓ Comparison complete. Results are visible in the dashboard below.
+                            </div>
+                        </template>
+
+                    </div>
+
+                    <footer class="slds-modal__footer modal-footer-clean">
+                        <lightning-button label="Close" onclick={closeStage3Modal}></lightning-button>
+                    </footer>
+
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- PHASE 3 — STAGE 4 MODAL: AI ANALYSIS                          -->
+        <!-- AI Summary + provider badge. Reuses existing state.            -->
+        <!-- No new Apex or AI calls.                                       -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <template if:true={isStage4ModalOpen}>
+            <section role="dialog" tabindex="-1" aria-label="AI Analysis" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container modal-wide">
+
+                    <header class="slds-modal__header modal-header-brand">
+                        <button
+                            class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close"
+                            onclick={closeStage4Modal}>
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="small"></lightning-icon>
+                        </button>
+                        <div class="modal-header-icon">🤖</div>
+                        <h2 class="slds-text-heading_medium modal-header-title">AI Analysis</h2>
+                        <p class="modal-header-sub">Stage 4 — AI-generated comparison summary and change explanations</p>
+                    </header>
+
+                    <div class="slds-modal__content modal-body-padded">
+
+                        <!-- AI Summary -->
+                        <template if:true={aiSummary}>
+                            <div class="ai-header">
+                                <div class="ai-provider-badge">🤖 Generated by {aiProviderName}</div>
+                                <lightning-icon icon-name="utility:einstein" size="small"></lightning-icon>
+                            </div>
+                            <div class="ai-summary-card">
+                                <lightning-formatted-rich-text value={formattedAiSummary}></lightning-formatted-rich-text>
+                            </div>
+                        </template>
+
+                        <!-- Generating spinner -->
+                        <template if:true={isGeneratingSummary}>
+                            <div class="spinner-container">
+                                <lightning-spinner alternative-text="Generating AI Summary"></lightning-spinner>
+                                <p class="spinner-label">Generating summary...</p>
+                            </div>
+                        </template>
+
+                        <!-- Not-ready hint -->
+                        <template if:false={aiSummary}>
+                            <template if:false={isGeneratingSummary}>
+                                <div class="stage-info-hint">
+                                    Run a comparison and use <strong>Generate AI Summary</strong> in Stage 3 to produce an AI analysis.
+                                </div>
+                            </template>
+                        </template>
+
+                    </div>
+
+                    <footer class="slds-modal__footer modal-footer-clean">
+                        <lightning-button label="Close" onclick={closeStage4Modal}></lightning-button>
+                    </footer>
+
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- EXISTING MODALS — UNCHANGED                                     -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+
+        <!-- New Comparison Modal — unchanged -->
+        <template if:true={isNewComparisonModalOpen}>
+            <section role="dialog" tabindex="-1" aria-label="Create Comparison" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container modal-premium">
+                    <header class="slds-modal__header modal-header-brand">
+                        <button
+                            class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close"
+                            onclick={closeNewComparisonModal}>
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="small"></lightning-icon>
+                        </button>
+                        <div class="modal-header-icon">⚖️</div>
+                        <h2 class="slds-text-heading_medium modal-header-title">Create Comparison</h2>
+                        <p class="modal-header-sub">Define a new metadata comparison between two Salesforce orgs</p>
+                    </header>
+                    <div class="slds-modal__content modal-body-padded">
+                        <div class="modal-field-group">
+                            <lightning-input
+                                label="Comparison Name"
+                                value={comparisonName}
+                                placeholder="e.g. Production vs UAT — June 2025"
+                                onchange={handleComparisonNameChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="modal-field-row">
+                            <div class="modal-field-group">
+                                <lightning-combobox
+                                    label="Source Org"
+                                    value={sourceOrgId}
+                                    options={orgOptions}
+                                    onchange={handleSourceOrgChange}>
+                                </lightning-combobox>
+                            </div>
+                            <div class="modal-field-group">
+                                <lightning-combobox
+                                    label="Destination Org"
+                                    value={destinationOrgId}
+                                    options={orgOptions}
+                                    onchange={handleDestinationOrgChange}>
+                                </lightning-combobox>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer modal-footer-clean">
+                        <lightning-button label="Cancel" onclick={closeNewComparisonModal}></lightning-button>
+                        <lightning-button label="Save Comparison" variant="brand" onclick={handleSaveComparisonFromModal}></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- Connect Org Modal — unchanged -->
+        <template if:true={isConnectOrgModalOpen}>
+            <section role="dialog" tabindex="-1" aria-label="Connect New Org" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container modal-premium">
+                    <header class="slds-modal__header modal-header-brand">
+                        <button
+                            class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close"
+                            onclick={closeConnectOrgModal}>
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="small"></lightning-icon>
+                        </button>
+                        <div class="modal-header-icon">🔗</div>
+                        <h2 class="slds-text-heading_medium modal-header-title">Connect New Org</h2>
+                        <p class="modal-header-sub">Authenticate a Salesforce org via OAuth to enable metadata retrieval</p>
+                    </header>
+                    <div class="slds-modal__content modal-body-padded">
+                        <div class="modal-field-group">
+                            <lightning-input
+                                label="Connected Org Name"
+                                value={orgDisplayName}
+                                onchange={handleOrgDisplayNameChange}>
+                            </lightning-input>
+                        </div>
+                        <div class="modal-field-group">
+                            <lightning-combobox
+                                label="Environment"
+                                value={environment}
+                                options={environmentOptions}
+                                onchange={handleEnvironmentChange}>
+                            </lightning-combobox>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer modal-footer-clean">
+                        <lightning-button label="Cancel" onclick={closeConnectOrgModal}></lightning-button>
+                        <lightning-button label="Connect New Org" variant="brand" onclick={connectNewOrg}></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- File Details Modal — unchanged -->
+        <template if:true={showFileDetailsModal}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-text-heading_medium">Metadata Details</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_large">
+                        <div class="detail-row">
+                            <span class="detail-label">Metadata Type</span>
+                            <span class="detail-value">{selectedFile.Metadata_Type__c}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">File Name</span>
+                            <span class="detail-value">{selectedFile.File_Name__c}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">File Path</span>
+                            <span class="detail-value">{selectedFile.File_Path__c}</span>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="View Difference" variant="brand" onclick={handleViewDifference}></lightning-button>
+                        <lightning-button label="Close" onclick={closeFileDetailsModal}></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <!-- Diff Modal — unchanged -->
+        <template if:true={showDiffModal}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container modal-wide">
+
+                    <header class="slds-modal__header">
+                        <h2 class="slds-text-heading_medium">Git Difference Report</h2>
+                    </header>
+
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <template if:true={differenceReport}>
+
+                            <div class="summary-card">
+                                <div class="summary-row">
+                                    <strong>File:</strong>
+                                    <span>{selectedFile.File_Name__c}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <strong>Metadata Type:</strong>
+                                    <span>{selectedFile.Metadata_Type__c}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <strong>Status:</strong>
+                                    <template if:true={isDeleted}>
+                                        <lightning-badge label="Missing in Destination Org"></lightning-badge>
+                                    </template>
+                                    <template if:true={isNew}>
+                                        <lightning-badge label="Added"></lightning-badge>
+                                    </template>
+                                    <template if:true={isModified}>
+                                        <lightning-badge label="Modified"></lightning-badge>
+                                    </template>
+                                </div>
+                                <div class="summary-row">
+                                    <strong>Explanation:</strong>
+                                    <span class="status-explanation">{statusMessage}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <strong>Added Lines:</strong>
+                                    <span>{differenceReport.addedLines}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <strong>Removed Lines:</strong>
+                                    <span>{differenceReport.removedLines}</span>
+                                </div>
+                            </div>
+
+                            <div class="diff-actions">
+                                <lightning-button label="View Raw Git Diff" onclick={toggleRawDiff}></lightning-button>
+                                <lightning-button label="🤖 Explain with AI" variant="brand" onclick={handleExplainWithAI}></lightning-button>
+                            </div>
+
+                            <template if:true={isGeneratingExplanation}>
+                                <lightning-spinner alternative-text="Generating AI Explanation"></lightning-spinner>
+                            </template>
+
+                            <template if:true={aiExplanation}>
+                                <lightning-card title="🤖 AI Change Explanation">
+                                    <div class="ai-provider-badge">Generated by {aiProviderName}</div>
+                                    <div class="slds-p-around_medium">
+                                        <div class="ai-summary-content">{aiExplanation}</div>
+                                    </div>
+                                </lightning-card>
+                                <br/>
+                            </template>
+
+                            <template if:true={showRawDiff}>
+                                <div class="diff-container">
+                                    <template for:each={formattedDiff} for:item="line">
+                                        <div key={line.id} class={line.className}>{line.text}</div>
+                                    </template>
+                                </div>
+                            </template>
+
+                        </template>
+                    </div>
+
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Close" onclick={closeDiffModal}></lightning-button>
+                    </footer>
+
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+    </div>
+</template>
