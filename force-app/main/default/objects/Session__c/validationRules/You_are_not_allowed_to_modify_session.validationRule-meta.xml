@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>You_are_not_allowed_to_modify_session</fullName>
+    <active>true</active>
+    <errorConditionFormula>AND(
+    NOT(ISNEW()),
+    OR(
+        ISCHANGED( Account__c ),
+        ISCHANGED(Subscription__c),
+        ISCHANGED(Status__c)
+    ),
+    $Profile.Name &lt;&gt; &quot;System Administrator&quot;
+)</errorConditionFormula>
+    <errorMessage>You are not allowed to modify session status. Ask to your trainer</errorMessage>
+</ValidationRule>
