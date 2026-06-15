@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>You_cannot_edit_a_completed_session</fullName>
+    <active>true</active>
+    <errorConditionFormula>AND(
+  ISPICKVAL(PRIORVALUE(Status__c), &quot;Completed&quot;)
+)</errorConditionFormula>
+    <errorMessage>You cannot edit a completed session.</errorMessage>
+</ValidationRule>
