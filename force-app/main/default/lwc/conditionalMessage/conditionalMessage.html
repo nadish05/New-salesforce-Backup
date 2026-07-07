@@ -1,0 +1,17 @@
+<template>
+    <lightning-card title="Order Checker">
+
+        <lightning-input 
+            label="Enter Amount"
+            type="number"
+            onchange={handleChange}>
+        </lightning-input>
+
+        <template if:true={isHighValue}>
+            <p style="color: green; font-weight: bold;">
+                High value order
+            </p>
+        </template>
+
+    </lightning-card>
+</template>
