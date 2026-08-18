@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <decisions>
+        <name>Payment_Completed</name>
+        <label>Payment Completed</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Subscription_Fully_Paid</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Subscription__r.Total_Amount_Paid__c</leftValueReference>
+                <operator>GreaterThanOrEqualTo</operator>
+                <rightValue>
+                    <elementReference>$Record.Amount__c</elementReference>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>update_Status</targetReference>
+            </connector>
+            <label>Subscription Fully Paid?</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Should_Update_Total</name>
+        <label>Should Update Total?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>for_amount_due</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Yes</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>ShouldUpdateTotal</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Multiple_Payment</targetReference>
+            </connector>
+            <label>Yes</label>
+        </rules>
+    </decisions>
+    <environments>Default</environments>
+    <formulas>
+        <name>Calculated_Amount_Due</name>
+        <dataType>Currency</dataType>
+        <expression>MAX(
+  0,
+  {!for_amount_due.Final_Amount__c}
+  -
+  BLANKVALUE({!for_amount_due.Total_Amount_Paid__c}, 0)
+)</expression>
+        <scale>0</scale>
+    </formulas>
+    <formulas>
+        <name>Multipay</name>
+        <dataType>Currency</dataType>
+        <expression>BLANKVALUE({!Get_Total_Pay.Total_Amount_Paid__c}, 0)
++
+{!Payment_Delta}</expression>
+        <scale>0</scale>
+    </formulas>
+    <formulas>
+        <name>Payment_Delta</name>
+        <dataType>Currency</dataType>
+        <expression>IF(
+  ISNEW(),
+  {!$Record.Amount_Paid__c},
+  {!$Record.Amount_Paid__c} - {!$Record__Prior.Amount_Paid__c}
+)</expression>
+        <scale>0</scale>
+    </formulas>
+    <formulas>
+        <name>paystatus</name>
+        <dataType>String</dataType>
+        <expression>IF(
+    {!$Record.Amount_Paid__c} = 0,
+    &quot;Pending&quot;,
+    IF(
+        {!$Record.Amount_Due__c} = 0,
+        &quot;Completed&quot;,
+        &quot;Partial&quot;
+    )
+)</expression>
+    </formulas>
+    <formulas>
+        <name>ShouldUpdateTotal</name>
+        <dataType>Boolean</dataType>
+        <expression>OR(
+  ISNEW(),
+  ISCHANGED({!$Record.Amount_Paid__c})
+)</expression>
+    </formulas>
+    <interviewLabel>Subscription Status Active {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Subscription Status Active</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <name>for_amount_due</name>
+        <label>for amount due</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>set_amount_due</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.Subscription__c</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Subscription__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
+        <name>Get_Total_Pay</name>
+        <label>Get Total Pay</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Should_Update_Total</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.Subscription__c</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Subscription__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordUpdates>
+        <name>Multiple_Payment</name>
+        <label>Multiple Payment</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>for_amount_due</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>Total_Amount_Paid__c</field>
+            <value>
+                <elementReference>Multipay</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record.Subscription__r</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>set_amount_due</name>
+        <label>set amount due</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Update_Pay_status</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>Amount_Due__c</field>
+            <value>
+                <elementReference>Calculated_Amount_Due</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>Update_Pay_status</name>
+        <label>Update Pay status</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Payment_Completed</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>Payment_Status__c</field>
+            <value>
+                <elementReference>paystatus</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>update_Status</name>
+        <label>update Status</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <inputAssignments>
+            <field>Status__c</field>
+            <value>
+                <stringValue>Active</stringValue>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record.Subscription__r</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_Total_Pay</targetReference>
+        </connector>
+        <object>Payment__c</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>
