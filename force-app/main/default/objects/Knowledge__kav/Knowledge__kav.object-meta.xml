@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <articleTypeChannelDisplay>
+        <articleTypeTemplates>
+            <channel>App</channel>
+            <template>Tab</template>
+        </articleTypeTemplates>
+        <articleTypeTemplates>
+            <channel>Prm</channel>
+            <template>Tab</template>
+        </articleTypeTemplates>
+        <articleTypeTemplates>
+            <channel>Csp</channel>
+            <template>Tab</template>
+        </articleTypeTemplates>
+        <articleTypeTemplates>
+            <channel>Pkb</channel>
+            <template>Toc</template>
+        </articleTypeTemplates>
+    </articleTypeChannelDisplay>
+    <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <externalSharingModel>Private</externalSharingModel>
+    <label>Knowledge</label>
+    <pluralLabel>Knowledge</pluralLabel>
+    <profileSearchLayouts>
+        <fields>TITLE</fields>
+        <fields>ABSTRACT</fields>
+        <fields>ARTICLE_NUMBER</fields>
+        <fields>LAST_PUBLISHED_DATE</fields>
+        <fields>PUBLISH_STATUS</fields>
+        <fields>Article_Content__c</fields>
+        <profileName>System Administrator</profileName>
+    </profileSearchLayouts>
+    <searchLayouts>
+        <searchResultsAdditionalFields>TITLE</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>ABSTRACT</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>ARTICLE_NUMBER</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>LAST_PUBLISHED_DATE</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>PUBLISH_STATUS</searchResultsAdditionalFields>
+        <searchResultsAdditionalFields>Article_Content__c</searchResultsAdditionalFields>
+    </searchLayouts>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>
