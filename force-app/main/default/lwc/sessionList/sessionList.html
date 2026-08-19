@@ -1,0 +1,14 @@
+<template>
+    <template if:true={sessions}>
+        <template for:each={sessions} for:item="session">
+            <c-session-item
+                key={session.Id}
+                session={session}>
+            </c-session-item>
+        </template>
+    </template>
+
+    <template if:true={error}>
+        <p>Error loading sessions</p>
+    </template>
+</template>
