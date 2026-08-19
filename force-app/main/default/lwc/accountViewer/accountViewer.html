@@ -1,0 +1,62 @@
+<template>
+    <lightning-card title="Account Viewer - Inline Editing">
+        <div class="slds-var-m-around_medium">
+            <div class="slds-m-bottom_medium">
+                <lightning-button 
+                    label="Load Accounts" 
+                    onclick={handleLoadAccounts}
+                    class="slds-m-right_small">
+                </lightning-button>
+
+                <lightning-button 
+                    label="Save Changes"
+                    variant="brand"
+                    onclick={handleSaveAccounts}
+                    disabled={isSaveDisabled}
+                    class="slds-m-right_small">
+                </lightning-button>
+
+                <lightning-button 
+                    label="Discard Changes"
+                    onclick={handleDiscardChanges}
+                    disabled={isDiscardDisabled}>
+                </lightning-button>
+            </div>
+
+            <!-- Loading Spinner -->
+            <template if:true={isLoading}>
+                <lightning-spinner variant="brand" size="large"></lightning-spinner>
+            </template>
+
+            <!-- Datatable with editable fields -->
+            <template if:true={accounts}>
+                <div class="slds-m-top_medium">
+                    <lightning-datatable
+                        key-field="Id"
+                        data={accounts}
+                        columns={columns}
+                        onsave={handleSave}
+                        draft-values={draftValues}>
+                    </lightning-datatable>
+                </div>
+
+                <!-- Draft changes indicator -->
+                <template if:true={hasDraftValues}>
+                    <div class="slds-m-top_small slds-text-body_small slds-text-color_success">
+                        <lightning-icon icon-name="utility:check" size="x-small"></lightning-icon>
+                        <span class="slds-m-left_x-small">{draftValueCount} field(s) modified</span>
+                    </div>
+                </template>
+            </template>
+
+            <!-- No data message -->
+            <template if:false={accounts}>
+                <div class="slds-box slds-text-align_center slds-m-top_medium">
+                    <p class="slds-text-body_regular slds-text-color_weak">
+                        Click "Load Accounts" to get started
+                    </p>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template>
