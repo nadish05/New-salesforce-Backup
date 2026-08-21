@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Gym_Trainer__c</fullName>
+    <label>Gym Trainer</label>
+    <referenceTo>Gym_Trainer__c</referenceTo>
+    <relationshipLabel>Member Trainers</relationshipLabel>
+    <relationshipName>Member_Trainers</relationshipName>
+    <relationshipOrder>1</relationshipOrder>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>
