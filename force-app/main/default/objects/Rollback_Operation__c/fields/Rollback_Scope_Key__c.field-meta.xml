@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Rollback_Scope_Key__c</fullName>
+    <caseSensitive>false</caseSensitive>
+    <description>Unique destinationOrgId + snapshotId fencing key.</description>
+    <externalId>true</externalId>
+    <label>Rollback Scope Key</label>
+    <length>160</length>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>
