@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workflow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <alerts>
+        <fullName>Payment_Refund_Approved_Email</fullName>
+        <description>Payment Refund Approved Email</description>
+        <protected>false</protected>
+        <recipients>
+            <type>owner</type>
+        </recipients>
+        <senderType>CurrentUser</senderType>
+        <template>unfiled$public/Payment_Refund_Approved</template>
+    </alerts>
+    <alerts>
+        <fullName>Payment_Refund_Approved_Email_for_Submitter</fullName>
+        <description>Payment Refund Approved Email for Submitter</description>
+        <protected>false</protected>
+        <recipients>
+            <type>owner</type>
+        </recipients>
+        <senderType>CurrentUser</senderType>
+        <template>unfiled$public/Payment_Refund_Approved</template>
+    </alerts>
+    <alerts>
+        <fullName>Payment_Refund_Rejected_Email</fullName>
+        <description>Payment Refund Rejected Email</description>
+        <protected>false</protected>
+        <recipients>
+            <type>owner</type>
+        </recipients>
+        <senderType>CurrentUser</senderType>
+        <template>unfiled$public/Payment_Refund_Rejected</template>
+    </alerts>
+    <alerts>
+        <fullName>Payment_Refund_Request_Email</fullName>
+        <description>Email alert to notify approver about payment refund request</description>
+        <protected>false</protected>
+        <recipients>
+            <recipient>Manager</recipient>
+            <type>role</type>
+        </recipients>
+        <senderType>CurrentUser</senderType>
+        <template>unfiled$public/Payment_Refund_Request</template>
+    </alerts>
+    <fieldUpdates>
+        <fullName>Set_Refund_Status_to_Approved</fullName>
+        <field>Refund_Status__c</field>
+        <literalValue>Approved</literalValue>
+        <name>Set Refund Status to Approved</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Set_Refund_Status_to_Rejected</fullName>
+        <field>Refund_Status__c</field>
+        <literalValue>Rejected</literalValue>
+        <name>Set Refund Status to Rejected</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
+        <fullName>Set_Refund_True</fullName>
+        <field>Refunded__c</field>
+        <literalValue>1</literalValue>
+        <name>Set Refund True</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+</Workflow>
