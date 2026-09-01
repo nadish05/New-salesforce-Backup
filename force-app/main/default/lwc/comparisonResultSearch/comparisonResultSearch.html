@@ -1,0 +1,52 @@
+<template>
+
+    <lightning-card title={cardTitle}>
+
+        <div class="slds-p-horizontal_medium slds-p-top_small">
+
+            <lightning-input
+                type="search"
+                label="Search"
+                placeholder="Search comparison results..."
+                onchange={handleSearch}>
+            </lightning-input>
+
+        </div>
+
+        <div class="slds-p-around_medium">
+
+            <lightning-datatable
+                key-field="Id"
+                data={results}
+                columns={columns}
+                sorted-by={sortBy}
+                sorted-direction={sortDirection}
+                onsort={handleSort}
+                hide-checkbox-column>
+            </lightning-datatable>
+
+        </div>
+
+        <div class="slds-p-around_medium slds-grid slds-grid_align-spread">
+
+            <lightning-button
+                label="Previous"
+                onclick={handlePrevious}
+                disabled={disablePrevious}>
+            </lightning-button>
+
+            <div>
+                Page {pageNumber}
+            </div>
+
+            <lightning-button
+                label="Next"
+                onclick={handleNext}
+                disabled={disableNext}>
+            </lightning-button>
+
+        </div>
+
+    </lightning-card>
+
+</template>
