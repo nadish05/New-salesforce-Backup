@@ -1,0 +1,246 @@
+<template>
+
+    <div class="page-bg">
+
+        <!-- HERO -->
+
+        <div class="hero-section">
+
+            <div>
+
+                <h1 class="hero-title">
+                    Salesforce Metadata Backup
+                </h1>
+
+                <p class="hero-subtitle">
+                    Securely backup Salesforce metadata directly to GitHub.
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- GRID -->
+
+        <div class="dashboard-grid">
+
+            <!-- LEFT -->
+
+            <div class="left-panel">
+
+                <!-- ORG CARD -->
+
+                <div class="glass-card">
+
+                    <div class="card-header">
+
+                        <div>
+
+                            <h2>
+                                Connected Salesforce Org
+                            </h2>
+
+                            <p>
+                                Connect and select Salesforce orgs.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div class="form-section">
+
+                        <!-- ENVIRONMENT -->
+
+                        <lightning-combobox
+                            label="Environment"
+                            value={selectedEnvironment}
+                            options={environmentOptions}
+                            onchange={handleEnvironmentChange}
+                            class="custom-input">
+                        </lightning-combobox>
+
+                        <!-- CONNECT BUTTON -->
+
+                        <div class="button-row">
+
+                            <lightning-button
+                                label="Connect Org"
+                                variant="neutral"
+                                onclick={connectOrg}
+                                class="main-btn">
+                            </lightning-button>
+
+                        </div>
+
+                        <!-- CONNECTED ORGS -->
+
+                        <lightning-combobox
+                            label="Select Connected Org"
+                            value={selectedOrgId}
+                            options={orgOptions}
+                            onchange={handleOrgChange}
+                            class="custom-input">
+                        </lightning-combobox>
+
+                    </div>
+
+                </div>
+
+                <!-- GITHUB CARD -->
+
+                <div class="glass-card">
+
+                    <div class="card-header">
+
+                        <div>
+
+                            <h2>
+                                GitHub Repository
+                            </h2>
+
+                            <p>
+                                Enter repository URL for metadata backup.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div class="form-section">
+
+                        <lightning-input
+                            label="Repository URL"
+                            value={repoUrl}
+                            onchange={handleRepoChange}
+                            class="custom-input">
+                        </lightning-input>
+
+                        <div class="button-row">
+
+                            <lightning-button
+                                label="Start Backup"
+                                variant="brand"
+                                onclick={startBackup}
+                                disabled={loading}
+                                class="main-btn">
+                            </lightning-button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- RIGHT -->
+
+            <div class="right-panel">
+
+                <!-- STATUS -->
+
+                <div class="glass-card status-card">
+
+                    <div class="status-header">
+
+                        <h2>
+                            Backup Status
+                        </h2>
+
+                    </div>
+
+                    <div class="status-content">
+
+                        <div class="status-indicator"></div>
+
+                        <div>
+
+                            <div class="status-label">
+                                Current Process
+                            </div>
+
+                            <div class="status-text">
+                                {currentStep}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- LOGS -->
+
+                <div class="glass-card logs-card">
+
+                    <div class="logs-header">
+
+                        <h2>
+                            Live Logs
+                        </h2>
+
+                    </div>
+
+                    <div class="logs-container">
+
+                        <template if:true={logs.length}>
+
+                            <template
+                                for:each={logs}
+                                for:item="log">
+
+                                <div
+                                    key={log}
+                                    class="log-item">
+
+                                    {log}
+
+                                </div>
+
+                            </template>
+
+                        </template>
+
+                        <template if:false={logs.length}>
+
+                            <div class="empty-logs">
+                                No logs yet.
+                            </div>
+
+                        </template>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- LOADING -->
+
+        <template if:true={loading}>
+
+            <div class="loading-overlay">
+
+                <div class="loading-card">
+
+                    <lightning-spinner
+                        alternative-text="Loading"
+                        size="medium">
+                    </lightning-spinner>
+
+                    <div class="loading-text">
+                        {currentStep}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </template>
+
+    </div>
+
+</template>
