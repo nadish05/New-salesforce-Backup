@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Snapshot_Is_Sealed__c</fullName>
+    <description>True when parent snapshot Status is SEALED.</description>
+    <formula>TEXT(Deployment_Snapshot__r.Status__c) = &quot;SEALED&quot;</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Snapshot Is Sealed</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
