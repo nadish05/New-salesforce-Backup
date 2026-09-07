@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Price_must_be_greater_than_0</fullName>
+    <active>true</active>
+    <description>Price must be greater than 0.</description>
+    <errorConditionFormula>Price__c  &lt;= 0</errorConditionFormula>
+    <errorMessage>Price must be greater than 0.</errorMessage>
+</ValidationRule>
