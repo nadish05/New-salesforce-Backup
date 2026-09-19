@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Prevent_Overpayment</fullName>
+    <active>true</active>
+    <errorConditionFormula>AND(
+  ISCHANGED(Amount_Paid__c),
+  NOT(Refunded__c),
+  Amount_Paid__c &gt;
+    (
+      Amount__c
+      -
+      BLANKVALUE(Subscription__r.Total_Amount_Paid__c, 0)
+    )
+)</errorConditionFormula>
+    <errorMessage>Amount Paid cannot be greater than the remaining amount.</errorMessage>
+</ValidationRule>

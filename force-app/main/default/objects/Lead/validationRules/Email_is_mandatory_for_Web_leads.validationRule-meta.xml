@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Email_is_mandatory_for_Web_leads</fullName>
+    <active>true</active>
+    <description>i</description>
+    <errorConditionFormula>AND( ISPICKVAL( LeadSource , &quot;Web&quot;) ,
+ ISBLANK( Email ) 
+)</errorConditionFormula>
+    <errorMessage>Email is mandatory for Web leads</errorMessage>
+</ValidationRule>

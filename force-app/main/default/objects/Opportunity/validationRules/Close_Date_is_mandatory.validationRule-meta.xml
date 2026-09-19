@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Close_Date_is_mandatory</fullName>
+    <active>true</active>
+    <errorConditionFormula>ISBLANK( CloseDate )</errorConditionFormula>
+    <errorMessage>Close Date is mandatory</errorMessage>
+</ValidationRule>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>My_Subscriptions</fullName>
+    <columns>NAME</columns>
+    <columns>Duration_Months__c</columns>
+    <columns>End_Date__c</columns>
+    <columns>Final_Amount__c</columns>
+    <columns>Membership_Plan__c</columns>
+    <columns>Price__c</columns>
+    <columns>Sessions_Used__c</columns>
+    <columns>Remaining_Sessions__c</columns>
+    <filterScope>Mine</filterScope>
+    <label>My Subscriptions</label>
+</ListView>

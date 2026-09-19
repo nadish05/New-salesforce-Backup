@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Set_Payment</name>
+        <label>Set Payment</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Amount__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>Get_Subscription.Final_Amount__c</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <environments>Default</environments>
+    <formulas>
+        <name>DuePayment</name>
+        <dataType>Currency</dataType>
+        <expression>MAX(
+  0,
+  {!Get_Subscription.Final_Amount__c}
+  -
+  BLANKVALUE({!Get_Subscription.Total_Amount_Paid__c}, 0)
+)</expression>
+        <scale>0</scale>
+    </formulas>
+    <formulas>
+        <name>PayStatus</name>
+        <dataType>String</dataType>
+        <expression>IF(
+    {!$Record.Amount_Paid__c} = 0,
+    &quot;Pending&quot;,
+    IF(
+        {!$Record.Amount_Due__c} = 0,
+        &quot;Completed&quot;,
+        &quot;Partial&quot;
+    )
+)</expression>
+    </formulas>
+    <interviewLabel>Payment Status {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Payment Status</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <name>Get_Subscription</name>
+        <label>Get Subscription</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Set_Payment</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.Subscription__c</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Subscription__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_Subscription</targetReference>
+        </connector>
+        <object>Payment__c</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>
