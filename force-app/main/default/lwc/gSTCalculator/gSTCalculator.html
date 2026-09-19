@@ -1,0 +1,14 @@
+<template>
+    <lightning-card title="GST Calculator">
+
+        <lightning-input 
+            label="Enter Amount"
+            type="number"
+            onchange={handleChange}>
+        </lightning-input>
+
+        <p>GST (18%): {gst}</p>
+        <p>Total: {total}</p>
+
+    </lightning-card>
+</template>

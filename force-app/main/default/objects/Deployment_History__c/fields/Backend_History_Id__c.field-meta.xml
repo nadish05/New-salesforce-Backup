@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Backend_History_Id__c</fullName>
+    <caseSensitive>false</caseSensitive>
+    <description>Backend in-memory/durable historyId. Not the Salesforce Metadata API deployment id.</description>
+    <externalId>true</externalId>
+    <label>Backend History Id</label>
+    <length>80</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>

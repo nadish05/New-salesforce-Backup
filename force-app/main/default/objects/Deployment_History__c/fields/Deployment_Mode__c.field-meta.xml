@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Deployment_Mode__c</fullName>
+    <description>Indicates whether the request performed a validation or an actual deployment.</description>
+    <label>Deployment Mode</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>VALIDATE</fullName>
+                <default>false</default>
+                <label>VALIDATE</label>
+            </value>
+            <value>
+                <fullName>DEPLOY</fullName>
+                <default>false</default>
+                <label>DEPLOY</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

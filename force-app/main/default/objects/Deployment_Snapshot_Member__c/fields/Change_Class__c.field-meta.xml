@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Change_Class__c</fullName>
+    <description>MODIFIED restore, NEW remove, or UNKNOWN.</description>
+    <label>Change Class</label>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>MODIFIED</fullName>
+                <default>false</default>
+                <label>MODIFIED</label>
+            </value>
+            <value>
+                <fullName>NEW</fullName>
+                <default>false</default>
+                <label>NEW</label>
+            </value>
+            <value>
+                <fullName>UNKNOWN</fullName>
+                <default>true</default>
+                <label>UNKNOWN</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
