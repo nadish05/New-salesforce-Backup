@@ -1,0 +1,23 @@
+<template>
+    <lightning-card title="Weather Info">
+
+        <!-- Success -->
+        <template if:true={weather}>
+            <p>Temperature: {weather.temperature}°C</p>
+            <p>Condition: {weather.condition}</p>
+        </template>
+
+        <!-- Error -->
+        <template if:true={error}>
+            <p style="color:red;">
+                Error: {error.body.message}
+            </p>
+        </template>
+
+        <!-- Loading -->
+        <template if:true={isLoading}>
+            <p>Loading...</p>
+        </template>
+
+    </lightning-card>
+</template>
