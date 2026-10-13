@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Existed_Before__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>True when the member existed in destination before deploy.</description>
+    <label>Existed Before</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

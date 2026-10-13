@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Deployment_Status__c</fullName>
+    <description>Overall deployment lifecycle status.</description>
+    <label>Deployment Status</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>IN_PROGRESS</fullName>
+                <default>false</default>
+                <label>IN_PROGRESS</label>
+            </value>
+            <value>
+                <fullName>SUCCESS</fullName>
+                <default>false</default>
+                <label>SUCCESS</label>
+            </value>
+            <value>
+                <fullName>FAILED</fullName>
+                <default>false</default>
+                <label>FAILED</label>
+            </value>
+            <value>
+                <fullName>BLOCKED</fullName>
+                <default>false</default>
+                <label>BLOCKED</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

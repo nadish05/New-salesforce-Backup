@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>VR_Sealed_Snapshot_Immutable</fullName>
+    <active>true</active>
+    <description>Blocks field changes after Status is SEALED.</description>
+    <errorConditionFormula>AND(
+  TEXT(PRIORVALUE(Status__c)) = &quot;SEALED&quot;,
+  OR(
+    ISCHANGED(Snapshot_Id__c),
+    ISCHANGED(Deployment_Id__c),
+    ISCHANGED(Source_Org_Id__c),
+    ISCHANGED(Destination_Org_Id__c),
+    ISCHANGED(Source_Branch__c),
+    ISCHANGED(Destination_Branch__c),
+    ISCHANGED(Created_At__c),
+    ISCHANGED(Completed_At__c),
+    ISCHANGED(Sealed_At__c),
+    ISCHANGED(Status__c),
+    ISCHANGED(Schema_Version__c),
+    ISCHANGED(Snapshot_Version__c),
+    ISCHANGED(Overall_Integrity_Hash__c),
+    ISCHANGED(Rollback_Eligible__c),
+    ISCHANGED(Capture_Failure_Reason__c),
+    ISCHANGED(Member_Count__c)
+  )
+)</errorConditionFormula>
+    <errorMessage>SEALED snapshots are immutable and cannot be changed.</errorMessage>
+</ValidationRule>
