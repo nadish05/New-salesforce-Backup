@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Fittness_Goal__c</fullName>
+    <label>Fitness Goal</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Weight Loss</fullName>
+                <default>false</default>
+                <label>Weight Loss</label>
+            </value>
+            <value>
+                <fullName>Weight Gain</fullName>
+                <default>false</default>
+                <label>Weight Gain</label>
+            </value>
+            <value>
+                <fullName>Power Lifting</fullName>
+                <default>false</default>
+                <label>Power Lifting</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,17 @@
+<template>
+    <lightning-card title="Product Categories">
+
+        <template if:true={categories}>
+            <ul>
+                <template for:each={categories} for:item="item">
+                    <li key={item.value}>{item.label}</li>
+                </template>
+            </ul>
+        </template>
+
+        <template if:false={categories}>
+            <p>No categories found</p>
+        </template>
+
+    </lightning-card>
+</template>
