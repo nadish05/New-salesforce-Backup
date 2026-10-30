@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>T1_vs_T2_Results</fullName>
+    <columns>NAME</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Metadata_Comparison__c</field>
+        <operation>equals</operation>
+        <value>T1 vs T2</value>
+    </filters>
+    <label>T1 vs T2 Results</label>
+</ListView>
