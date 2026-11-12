@@ -1,5 +1,5 @@
 import { LightningElement, wire } from 'lwc';
-import getWeather from '@salesforce/apex/WeatherService.getWeather';
+import getWeather from '@salesforce/apex/WeatherServicedemo.getWeather';
 
 export default class WeatherApp extends LightningElement {
 

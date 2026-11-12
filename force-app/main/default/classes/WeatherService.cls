@@ -1,52 +1,91 @@
-public with sharing class WeatherService {
+public class WeatherService {
+    /**
+     * Gets the weather at Coral Cloud Resorts for the provided date
+     */
+    public static Weather getResortWeather(Datetime dateToCheck) {
+        // Copilot was trained in 2023 so it will use 2023 as the default year if
+        // the user does not specify a year in their prompt. This means that we need
+        // to adjust the input date to be on the current year.
+        Integer currentYear = Date.today().year();
+        Integer yearDelta = currentYear - dateToCheck.year();
+        dateToCheck = dateToCheck.addYears(yearDelta);
+        String isoDate = dateToCheck.format('yyyy-MM-dd');
+        String dateString = dateToCheck.format('MMMM d');
 
-    @AuraEnabled(cacheable=true)
-    public static WeatherWrapper getWeather() {
-
-        // Get API Key from Custom Metadata
-        Weather_Config__mdt config = Weather_Config__mdt.getInstance('Default');
-
-        if (config == null) {
-            throw new AuraHandledException('Custom Metadata not found');
-        }
-
-        String apiKey = config.api_key__c;
-
-        Http http = new Http();
+        // Prepare API request
         HttpRequest req = new HttpRequest();
-
         req.setEndpoint(
-            'callout:Weather/data/2.5/weather?q=Chennai&appid=' 
-            + apiKey + 
-            '&units=metric'
+            'callout:Weather_Endpoint/weather?lat=37.789782764570425&lon=-122.39723702244089&date=' +
+            isoDate
         );
         req.setMethod('GET');
-
+        // Make callout
+        Http http = new Http();
         HttpResponse res = http.send(req);
-
-        System.debug('STATUS: ' + res.getStatusCode());
-        System.debug('BODY: ' + res.getBody());
-
-        if (res.getStatusCode() == 200) {
-            Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
-
-            Map<String, Object> main = (Map<String, Object>) data.get('main');
-            List<Object> weatherList = (List<Object>) data.get('weather');
-            Map<String, Object> weather = (Map<String, Object>) weatherList[0];
-
-            WeatherWrapper result = new WeatherWrapper();
-            result.temperature = String.valueOf(main.get('temp'));
-            result.condition = (String) weather.get('description');
-
-            return result;
-
-        } else {
-            throw new AuraHandledException('API Error: ' + res.getBody());
+        if (res.getStatusCode() != 200) {
+            throw new CalloutException('Bad response: ' + res);
         }
+
+        // The response contains a list of temperatures for different times of the day
+        // We parse the response and find the min and max temperatures
+        String body = res.getBody();
+        WeatherApiResponse weatherResponse = (WeatherApiResponse) JSON.deserialize(
+            body,
+            WeatherAPIResponse.class
+        );
+        List<Decimal> temperatures = new List<Decimal>();
+        for (TemperatureWrapper item : weatherResponse.weather) {
+            if (item.temperature != null) {
+                temperatures.add(item.temperature);
+            }
+        }
+        temperatures.sort();
+
+        // Prepare temperatures and description
+        Decimal minTempC = temperatures[0];
+        Decimal maxTempC = temperatures[temperatures.size() - 1];
+        Decimal minTempF = toFahrenheit(minTempC);
+        Decimal maxTempF = toFahrenheit(maxTempC);
+        String description =
+            'On ' +
+            dateString +
+            ', temperature should be between ' +
+            minTempC +
+            '°C (' +
+            minTempF +
+            '°F) and ' +
+            maxTempC +
+            '°C (' +
+            maxTempF +
+            '°F) at Coral Cloud Resorts.';
+
+        // Return weather info
+        Weather weather = new Weather();
+        weather.minTemperatureC = minTempC;
+        weather.minTemperatureF = minTempF;
+        weather.maxTemperatureC = maxTempC;
+        weather.maxTemperatureF = maxTempF;
+        weather.description = description;
+        return weather;
     }
 
-    public class WeatherWrapper {
-        @AuraEnabled public String temperature;
-        @AuraEnabled public String condition;
+    private static Decimal toFahrenheit(Decimal celsius) {
+        return (celsius * 9 / 5 + 32).setScale(1);
+    }
+
+    private class WeatherApiResponse {
+        public List<TemperatureWrapper> weather;
+    }
+
+    private class TemperatureWrapper {
+        public Decimal temperature;
+    }
+
+    public class Weather {
+        public Decimal minTemperatureC;
+        public Decimal minTemperatureF;
+        public Decimal maxTemperatureC;
+        public Decimal maxTemperatureF;
+        public String description;
     }
 }

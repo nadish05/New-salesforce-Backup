@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Qualified_Phone_number</fullName>
+    <active>true</active>
+    <errorConditionFormula>AND( ISPICKVAL( Status , &quot;Qualified&quot;) , ISBLANK( Phone ))</errorConditionFormula>
+    <errorMessage>Phone number is required when Lead Status is Qualified.</errorMessage>
+</ValidationRule>

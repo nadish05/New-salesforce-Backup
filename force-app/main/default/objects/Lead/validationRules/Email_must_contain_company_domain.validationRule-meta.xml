@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Email_must_contain_company_domain</fullName>
+    <active>false</active>
+    <errorConditionFormula>NOT(
+  REGEX(
+    Email,
+    &quot;^[A-Za-z0-9._%+-]+@(?!gmail\\.com$|yahoo\\.com$|outlook\\.com$|hotmail\\.com$|aol\\.com$|icloud\\.com$)[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$&quot;
+  )
+)</errorConditionFormula>
+    <errorMessage>Email must contain company domain</errorMessage>
+</ValidationRule>

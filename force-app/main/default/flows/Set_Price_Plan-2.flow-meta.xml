@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Set_Price</name>
+        <label>Set Price</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Price__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>Setpriceformula</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>$Record.Discount__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>DiscountFormula</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <environments>Default</environments>
+    <formulas>
+        <name>DiscountFormula</name>
+        <dataType>Number</dataType>
+        <expression>CASE(
+  TEXT($Record.Membership_Plan__c),
+  &quot;One Month Plan&quot;, 1,
+  &quot;Three Month Plan&quot;, 5,
+  &quot;Six Month Plan&quot;, 10,
+  &quot;Yearly Plan&quot;, 20,
+  0
+)</expression>
+        <scale>0</scale>
+    </formulas>
+    <formulas>
+        <name>Setpriceformula</name>
+        <dataType>Currency</dataType>
+        <expression>CASE(
+  TEXT($Record.Membership_Plan__c),
+  &quot;One Month Plan&quot;, 1500,
+  &quot;Three Month Plan&quot;, 3799,
+  &quot;Six Month Plan&quot;, 6500,
+  &quot;Yearly Plan&quot;, 8500,
+  0
+)</expression>
+        <scale>0</scale>
+    </formulas>
+    <interviewLabel>Set Price {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Set Price Plan</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Set_Price</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Membership_Plan__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>Membership_Plan__c</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>
