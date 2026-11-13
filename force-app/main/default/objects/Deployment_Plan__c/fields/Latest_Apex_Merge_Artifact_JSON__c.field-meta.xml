@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Latest_Apex_Merge_Artifact_JSON__c</fullName>
+    <description>Structured per-unit progress and correlation metadata for the latest Apex merge artifact retrieval run. Does not store artifact bytes or credentials.</description>
+    <label>Latest Apex Merge Artifact JSON</label>
+    <length>131072</length>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>

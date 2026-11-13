@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Status__c</fullName>
+    <description>Backend rollback operation state machine.</description>
+    <label>Status</label>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>NOT_STARTED</fullName>
+                <default>true</default>
+                <label>NOT_STARTED</label>
+            </value>
+            <value>
+                <fullName>IN_PROGRESS</fullName>
+                <default>false</default>
+                <label>IN_PROGRESS</label>
+            </value>
+            <value>
+                <fullName>SUCCEEDED</fullName>
+                <default>false</default>
+                <label>SUCCEEDED</label>
+            </value>
+            <value>
+                <fullName>FAILED</fullName>
+                <default>false</default>
+                <label>FAILED</label>
+            </value>
+            <value>
+                <fullName>UNKNOWN_RESULT</fullName>
+                <default>false</default>
+                <label>UNKNOWN_RESULT</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

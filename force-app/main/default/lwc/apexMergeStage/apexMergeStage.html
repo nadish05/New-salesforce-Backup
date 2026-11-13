@@ -1,0 +1,119 @@
+<template>
+    <div class="apex-merge-stage section-card slds-m-bottom_medium">
+        <div class="section-card-header">
+            <span class="section-card-title">Apex Merge</span>
+            <span class="slds-text-body_small slds-text-color_weak">
+                Full-class merge for modified Apex before Deployment Review
+            </span>
+        </div>
+
+        <div class="section-card-body slds-p-around_medium">
+            <template if:true={isInitializing}>
+                <lightning-spinner
+                    alternative-text="Initializing merge session">
+                </lightning-spinner>
+            </template>
+
+            <template if:true={sessionError}>
+                <span class="slds-text-color_error">{sessionError}</span>
+            </template>
+
+            <template if:true={hasEligibleClasses}>
+                <div class="slds-grid slds-gutters slds-wrap">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                        <ul class="slds-has-dividers_bottom-space">
+                            <template for:each={classRows} for:item="row">
+                                <li key={row.key} class="slds-item">
+                                    <button
+                                        type="button"
+                                        class="slds-button slds-button_reset slds-text-link merge-class-row"
+                                        data-key={row.key}
+                                        onclick={handleClassSelect}>
+                                        <span class="slds-truncate" title={row.metadataName}>
+                                            {row.metadataName}
+                                        </span>
+                                        <span class={row.badgeClass}>{row.statusLabel}</span>
+                                    </button>
+                                    <template if:true={row.errorMessage}>
+                                        <p class="slds-text-color_error slds-text-body_small">
+                                            {row.errorMessage}
+                                        </p>
+                                    </template>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-3">
+                        <template if:true={selectedRow}>
+                            <p class="slds-text-heading_small slds-m-bottom_small">
+                                {selectedRow.metadataName}
+                            </p>
+                            <lightning-button
+                                label="Full Class Merge Preview"
+                                variant="brand"
+                                onclick={handlePreviewFullMerge}
+                                disabled={isLoadingPreview}>
+                            </lightning-button>
+
+                            <template if:true={isLoadingPreview}>
+                                <lightning-spinner
+                                    size="small"
+                                    alternative-text="Loading preview">
+                                </lightning-spinner>
+                            </template>
+
+                            <template if:true={hasPreview}>
+                                <template if:true={showConflictPanel}>
+                                    <div class="slds-m-top_medium">
+                                        <p class="slds-text-title_caps">
+                                            Conflicts
+                                        </p>
+                                        <template for:each={conflictItems} for:item="conflict">
+                                            <p key={conflict._key} class="slds-text-body_small">
+                                                {conflict.message}
+                                            </p>
+                                        </template>
+                                        <div class="slds-m-top_small">
+                                            <lightning-button
+                                                label="Accept Source"
+                                                onclick={handleAcceptSource}
+                                                disabled={isResolving}>
+                                            </lightning-button>
+                                            <lightning-button
+                                                label="Accept Target"
+                                                class="slds-m-left_x-small"
+                                                onclick={handleAcceptTarget}
+                                                disabled={isResolving}>
+                                            </lightning-button>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <div class="slds-m-top_medium">
+                                    <p class="slds-text-title_caps">Merged preview</p>
+                                    <pre class="merge-preview-pane">{mergedPreviewText}</pre>
+                                </div>
+                            </template>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="slds-m-top_medium slds-text-align_right">
+                    <lightning-button
+                        label="Continue to Deployment Review"
+                        variant="success"
+                        onclick={handleContinueToReview}
+                        disabled={isContinueDisabled}>
+                    </lightning-button>
+                    <template if:true={isSealing}>
+                        <lightning-spinner
+                            size="small"
+                            alternative-text="Sealing manifest">
+                        </lightning-spinner>
+                    </template>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>
