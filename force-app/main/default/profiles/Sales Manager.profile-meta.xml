@@ -105,6 +105,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>MethodMergeNoConflictDemo</apexClass>
+        <enabled>false</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>MicrobatchSelfRegController</apexClass>
         <enabled>false</enabled>
     </classAccesses>
