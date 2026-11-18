@@ -17,3 +17,89 @@
     align-items: center;
     gap: 0.5rem;
 }
+
+.method-inventory-section {
+    border-top: 1px solid var(--lwc-colorBorder, #dddbda);
+    padding-top: 0.75rem;
+}
+
+.method-inventory-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.method-inventory-row {
+    padding: 0.75rem 0;
+}
+
+.method-inventory-row_conflict {
+    background: rgba(194, 57, 52, 0.06);
+    border-left: 3px solid var(--lwc-colorBorderError, #c23934);
+    padding-left: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.method-inventory-row_resolved {
+    border-left: 3px solid var(--lwc-colorBorderSuccess, #2e844a);
+    padding-left: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.method-resolution-choice {
+    margin-top: 0.25rem;
+    font-weight: 600;
+}
+
+.method-resolve-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.method-repreview-modal {
+    z-index: 9001;
+}
+
+.publish-status-line {
+    text-align: right;
+    color: #2e844a;
+}
+
+.method-inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.method-name {
+    font-weight: 600;
+}
+
+.method-signature {
+    margin-top: 0.125rem;
+    font-family: monospace;
+    font-size: 0.7rem;
+}
+
+.method-impl-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+@media (min-width: 48rem) {
+    .method-impl-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.method-impl-pane {
+    max-height: 12rem;
+    margin-top: 0.25rem;
+}
+
+.method-impl-block .slds-text-title_caps {
+    font-size: 0.65rem;
+}

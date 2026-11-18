@@ -3,7 +3,7 @@
         <div class="section-card-header">
             <span class="section-card-title">Apex Merge</span>
             <span class="slds-text-body_small slds-text-color_weak">
-                Full-class merge for modified Apex before Deployment Review
+                Full-class or method-level merge preview for modified Apex before Deployment Review
             </span>
         </div>
 
@@ -49,18 +49,170 @@
                             <p class="slds-text-heading_small slds-m-bottom_small">
                                 {selectedRow.metadataName}
                             </p>
-                            <lightning-button
-                                label="Full Class Merge Preview"
-                                variant="brand"
-                                onclick={handlePreviewFullMerge}
-                                disabled={isLoadingPreview}>
-                            </lightning-button>
+                            <div class="slds-button-group" role="group">
+                                <lightning-button
+                                    label="Full Class Merge Preview"
+                                    variant="brand"
+                                    onclick={handlePreviewFullMerge}
+                                    disabled={isLoadingPreview}>
+                                </lightning-button>
+                                <lightning-button
+                                    label="Method Merge Preview"
+                                    variant="neutral"
+                                    class="slds-m-left_x-small"
+                                    onclick={handlePreviewMethodMerge}
+                                    disabled={isMethodPreviewActionDisabled}>
+                                </lightning-button>
+                            </div>
+
+                            <template if:true={showMethodRepreviewConfirm}>
+                                <section
+                                    class="slds-modal slds-fade-in-open method-repreview-modal"
+                                    role="dialog"
+                                    aria-labelledby="method-repreview-heading"
+                                    aria-modal="true">
+                                    <div class="slds-modal__container">
+                                        <header class="slds-modal__header">
+                                            <h2
+                                                id="method-repreview-heading"
+                                                class="slds-modal__title slds-hyphenate">
+                                                Re-run method merge preview?
+                                            </h2>
+                                        </header>
+                                        <div class="slds-modal__content slds-p-around_medium">
+                                            <p class="slds-text-body_regular">
+                                                Re-previewing resets method resolutions you have
+                                                already chosen for this class. You will need to
+                                                resolve conflicting methods again.
+                                            </p>
+                                        </div>
+                                        <footer class="slds-modal__footer">
+                                            <lightning-button
+                                                label="Cancel"
+                                                onclick={handleCancelMethodRepreview}>
+                                            </lightning-button>
+                                            <lightning-button
+                                                label="Re-preview anyway"
+                                                variant="brand"
+                                                class="slds-m-left_x-small"
+                                                onclick={handleConfirmMethodRepreview}>
+                                            </lightning-button>
+                                        </footer>
+                                    </div>
+                                </section>
+                                <div class="slds-backdrop slds-backdrop_open"></div>
+                            </template>
 
                             <template if:true={isLoadingPreview}>
                                 <lightning-spinner
                                     size="small"
                                     alternative-text="Loading preview">
                                 </lightning-spinner>
+                            </template>
+
+                            <template if:true={showMethodInventory}>
+                                <div class="slds-m-top_medium method-inventory-section">
+                                    <p class="slds-text-title_caps slds-m-bottom_x-small">
+                                        Method inventory
+                                    </p>
+                                    <p class="slds-text-body_small slds-m-bottom_small">
+                                        {methodPreviewSummary}
+                                    </p>
+
+                                    <template if:true={methodPreviewEmpty}>
+                                        <p class="slds-text-body_small slds-text-color_weak">
+                                            No methods were returned for this class preview.
+                                        </p>
+                                    </template>
+
+                                    <template if:true={isMethodResolveBusy}>
+                                        <lightning-spinner
+                                            size="small"
+                                            alternative-text="Resolving method">
+                                        </lightning-spinner>
+                                    </template>
+
+                                    <template if:true={hasMethodInventory}>
+                                        <ul class="slds-has-dividers_bottom-space method-inventory-list">
+                                            <template for:each={methodInventoryRows} for:item="method">
+                                                <li
+                                                    key={method._key}
+                                                    class={method.rowClass}>
+                                                    <div class="method-inventory-header">
+                                                        <span
+                                                            class="slds-text-heading_small method-name"
+                                                            title={method.signature}>
+                                                            {method.methodName}
+                                                        </span>
+                                                        <span class={method.badgeClass}>
+                                                            {method.statusLabel}
+                                                        </span>
+                                                    </div>
+                                                    <p
+                                                        class="slds-text-body_small slds-text-color_weak method-signature">
+                                                        {method.signature}
+                                                    </p>
+
+                                                    <template if:true={method.showResolutionChoice}>
+                                                        <p class="slds-text-body_small method-resolution-choice">
+                                                            Resolution: {method.resolutionLabel}
+                                                        </p>
+                                                    </template>
+
+                                                    <template if:true={method.showInclusionHint}>
+                                                        <p class="slds-text-body_small slds-text-color_weak">
+                                                            {method.inclusionHint}
+                                                        </p>
+                                                    </template>
+
+                                                    <template if:true={method.showResolveActions}>
+                                                        <div class="method-resolve-actions slds-m-top_x-small">
+                                                            <lightning-button
+                                                                label="Accept Source"
+                                                                data-method-key={method.signature}
+                                                                onclick={handleMethodAcceptSource}
+                                                                disabled={isMethodResolveBusy}>
+                                                            </lightning-button>
+                                                            <lightning-button
+                                                                label="Accept Destination"
+                                                                class="slds-m-left_x-small"
+                                                                data-method-key={method.signature}
+                                                                onclick={handleMethodAcceptDestination}
+                                                                disabled={isMethodResolveBusy}>
+                                                            </lightning-button>
+                                                        </div>
+                                                    </template>
+
+                                                    <template if:true={method.showImplementations}>
+                                                        <div class="method-impl-grid slds-m-top_small">
+                                                            <div class="method-impl-block">
+                                                                <p class="slds-text-title_caps">Base</p>
+                                                                <pre class="merge-preview-pane method-impl-pane">{method.baseImplementationText}</pre>
+                                                            </div>
+                                                            <div class="method-impl-block">
+                                                                <p class="slds-text-title_caps">Source</p>
+                                                                <pre class="merge-preview-pane method-impl-pane">{method.sourceImplementationText}</pre>
+                                                            </div>
+                                                            <div class="method-impl-block">
+                                                                <p class="slds-text-title_caps">Destination</p>
+                                                                <pre class="merge-preview-pane method-impl-pane">{method.destinationImplementationText}</pre>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </template>
+
+                                    <template if:true={showMethodMergedPreview}>
+                                        <div class="slds-m-top_medium">
+                                            <p class="slds-text-title_caps">
+                                                Merged method preview
+                                            </p>
+                                            <pre class="merge-preview-pane">{mergedPreviewText}</pre>
+                                        </div>
+                                    </template>
+                                </div>
                             </template>
 
                             <template if:true={hasPreview}>
@@ -90,22 +242,35 @@
                                     </div>
                                 </template>
 
-                                <div class="slds-m-top_medium">
-                                    <p class="slds-text-title_caps">Merged preview</p>
-                                    <pre class="merge-preview-pane">{mergedPreviewText}</pre>
-                                </div>
+                                <template if:true={showFullMergedPreview}>
+                                    <div class="slds-m-top_medium">
+                                        <p class="slds-text-title_caps">Merged preview</p>
+                                        <pre class="merge-preview-pane">{mergedPreviewText}</pre>
+                                    </div>
+                                </template>
                             </template>
                         </template>
                     </div>
                 </div>
 
                 <div class="slds-m-top_medium slds-text-align_right">
+                    <template if:true={showPublishStatus}>
+                        <p class="slds-text-body_small slds-m-bottom_x-small publish-status-line">
+                            {publishStatusLabel}
+                        </p>
+                    </template>
                     <lightning-button
                         label="Continue to Deployment Review"
                         variant="success"
                         onclick={handleContinueToReview}
                         disabled={isContinueDisabled}>
                     </lightning-button>
+                    <template if:true={isPublishing}>
+                        <lightning-spinner
+                            size="small"
+                            alternative-text="Publishing to Source">
+                        </lightning-spinner>
+                    </template>
                     <template if:true={isSealing}>
                         <lightning-spinner
                             size="small"

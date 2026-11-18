@@ -115,6 +115,31 @@ public with sharing class ApexMergeController {
     }
 
     @AuraEnabled
+    public static String publishClassMerge(
+        Id comparisonId,
+        Id deploymentPlanId,
+        String mergeSessionId,
+        String requestJson
+    ) {
+        try {
+            validatePlanForComparison(comparisonId, deploymentPlanId);
+            return invokeSessionSubresource(
+                comparisonId,
+                deploymentPlanId,
+                mergeSessionId,
+                'publish',
+                requestJson,
+                LONG_TIMEOUT_MS,
+                false
+            );
+        } catch (AuraHandledException e) {
+            throw e;
+        } catch (Exception e) {
+            return failureJson('Unable to process merge publish request.');
+        }
+    }
+
+    @AuraEnabled
     public static String persistSealedMergeArtifacts(
         Id comparisonId,
         Id deploymentPlanId,

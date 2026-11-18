@@ -3,7 +3,30 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import createMergeSession from '@salesforce/apex/ApexMergeController.createMergeSession';
 import previewClassMerge from '@salesforce/apex/ApexMergeController.previewClassMerge';
 import resolveClassMerge from '@salesforce/apex/ApexMergeController.resolveClassMerge';
+import publishClassMerge from '@salesforce/apex/ApexMergeController.publishClassMerge';
+import getMergeSessionStatus from '@salesforce/apex/ApexMergeController.getMergeSessionStatus';
 import sealMergeManifest from '@salesforce/apex/ApexMergeController.sealMergeManifest';
+import {
+    FULL_MERGE_MODE,
+    METHOD_MERGE_MODE,
+    METHOD_RESOLUTION_STRATEGY,
+    buildMethodInventoryRows,
+    buildMethodResolutionEntry,
+    classHasUnresolvedMethodConflicts,
+    isFullMergePreview,
+    isMethodMergePreview,
+    methodPreviewHasResolvedMethods
+} from './apexMergeMethodInventory';
+import {
+    collectMethodPublishMetadataNames,
+    isPublishOutcomeAmbiguous,
+    isPublishResponseConfirmed,
+    isSessionPublishConfirmed,
+    resolveMergeModeFromResponse,
+    sessionRequiresMethodPublish,
+    SESSION_STATUS
+} from './apexMergePublishLifecycle';
+
 function resolveApexClassIdentity(record) {
     if (!record) {
         return '';
@@ -50,12 +73,18 @@ export default class ApexMergeStage extends LightningElement {
     @track classRows = [];
     @track isInitializing = false;
     @track isSealing = false;
+    @track isPublishing = false;
     @track mergeSessionId;
     @track selectedClassKey;
     @track previewData;
     @track isLoadingPreview = false;
     @track isResolving = false;
+    @track showMethodRepreviewConfirm = false;
     @track sessionError;
+    @track publishedCommitSha;
+    @track sessionPublishConfirmed = false;
+
+  _continueOperationInFlight = false;
 
     statusPollingInterval;
 
@@ -85,9 +114,23 @@ export default class ApexMergeStage extends LightningElement {
             !this.allClassesSealed ||
             this.isInitializing ||
             this.isSealing ||
+            this.isPublishing ||
             this.isLoadingPreview ||
-            this.isResolving
+            this.isResolving ||
+            this._continueOperationInFlight
         );
+    }
+
+    get showPublishStatus() {
+        return this.sessionPublishConfirmed && Boolean(this.publishedCommitSha);
+    }
+
+    get publishStatusLabel() {
+        if (!this.showPublishStatus) {
+            return '';
+        }
+        const shortSha = String(this.publishedCommitSha).slice(0, 7);
+        return `Published to Source (${shortSha})`;
     }
 
     get selectedRow() {
@@ -98,6 +141,14 @@ export default class ApexMergeStage extends LightningElement {
 
     get hasPreview() {
         return !!this.previewData;
+    }
+
+    get isFullMergePreview() {
+        return isFullMergePreview(this.previewData);
+    }
+
+    get isMethodMergePreview() {
+        return isMethodMergePreview(this.previewData);
     }
 
     get conflictItems() {
@@ -125,7 +176,64 @@ export default class ApexMergeStage extends LightningElement {
     }
 
     get showConflictPanel() {
-        return this.hasPreview && this.hasConflicts;
+        return (
+            this.hasPreview &&
+            this.isFullMergePreview &&
+            this.hasConflicts
+        );
+    }
+
+    get showFullMergedPreview() {
+        return this.hasPreview && this.isFullMergePreview;
+    }
+
+    get showMethodMergedPreview() {
+        return (
+            this.hasPreview &&
+            this.isMethodMergePreview &&
+            this.previewData?.resolved === true &&
+            Boolean(this.mergedPreviewText)
+        );
+    }
+
+    get methodInventoryRows() {
+        return buildMethodInventoryRows(this.previewData?.methods);
+    }
+
+    get hasMethodInventory() {
+        return this.methodInventoryRows.length > 0;
+    }
+
+    get showMethodInventory() {
+        return this.hasPreview && this.isMethodMergePreview;
+    }
+
+    get methodPreviewEmpty() {
+        return this.showMethodInventory && !this.hasMethodInventory;
+    }
+
+    get isMethodResolveBusy() {
+        return this.isResolving;
+    }
+
+    get isMethodPreviewActionDisabled() {
+        return this.isLoadingPreview || this.isResolving;
+    }
+
+    get methodPreviewSummary() {
+        if (!this.isMethodMergePreview) {
+            return '';
+        }
+        const count = this.previewData?.conflictCount;
+        const conflictPart =
+            typeof count === 'number'
+                ? `${count} method conflict${count === 1 ? '' : 's'}`
+                : this.hasConflicts
+                  ? `${this.conflictItems.length} method conflict(s)`
+                  : 'No method conflicts';
+        const resolved =
+            this.previewData?.resolved === true ? ' — merge resolved' : '';
+        return `Method merge preview: ${conflictPart}${resolved}`;
     }
 
     _syncClassRows() {
@@ -139,7 +247,8 @@ export default class ApexMergeStage extends LightningElement {
                 status: CLASS_STATUS.PENDING,
                 statusLabel: 'Pending',
                 badgeClass: 'slds-badge slds-theme_warning',
-                errorMessage: null
+                errorMessage: null,
+                mergeMode: null
             };
         });
 
@@ -159,6 +268,8 @@ export default class ApexMergeStage extends LightningElement {
 
         this.isInitializing = true;
         this.sessionError = null;
+        this.sessionPublishConfirmed = false;
+        this.publishedCommitSha = null;
 
         const eligiblePayload = this._eligibleRecords.map((record) => ({
             comparisonResultId: record.Id,
@@ -180,6 +291,7 @@ export default class ApexMergeStage extends LightningElement {
                 );
             }
             this.mergeSessionId = parsed.mergeSessionId;
+            await this._hydrateSessionPublishState();
         } catch (error) {
             this.sessionError =
                 error?.body?.message ||
@@ -188,6 +300,22 @@ export default class ApexMergeStage extends LightningElement {
             this._dispatchMergeError(this.sessionError);
         } finally {
             this.isInitializing = false;
+        }
+    }
+
+    async _hydrateSessionPublishState() {
+        if (!this.mergeSessionId) {
+            return;
+        }
+
+        try {
+            const statusPayload = await this._fetchMergeSessionStatus();
+            if (isSessionPublishConfirmed(statusPayload)) {
+                const publish = statusPayload.publish || statusPayload;
+                this._markSessionPublished(publish.publishedCommitSha);
+            }
+        } catch (e) {
+            /* non-blocking recovery */
         }
     }
 
@@ -201,6 +329,31 @@ export default class ApexMergeStage extends LightningElement {
     }
 
     async handlePreviewFullMerge() {
+        await this._previewClassMerge(FULL_MERGE_MODE);
+    }
+
+    async handlePreviewMethodMerge() {
+        if (this._shouldConfirmMethodRepreview()) {
+            this.showMethodRepreviewConfirm = true;
+            return;
+        }
+        await this._previewClassMerge(METHOD_MERGE_MODE);
+    }
+
+    handleCancelMethodRepreview() {
+        this.showMethodRepreviewConfirm = false;
+    }
+
+    async handleConfirmMethodRepreview() {
+        this.showMethodRepreviewConfirm = false;
+        await this._previewClassMerge(METHOD_MERGE_MODE);
+    }
+
+    _shouldConfirmMethodRepreview() {
+        return methodPreviewHasResolvedMethods(this.previewData);
+    }
+
+    async _previewClassMerge(mode) {
         const row = this.selectedRow;
         if (!row || !this.mergeSessionId) {
             return;
@@ -217,7 +370,7 @@ export default class ApexMergeStage extends LightningElement {
                 mergeSessionId: this.mergeSessionId,
                 requestJson: JSON.stringify({
                     metadataName: row.metadataName,
-                    mode: 'FULL'
+                    mode
                 })
             });
             const parsed = this._parseJson(raw);
@@ -225,20 +378,91 @@ export default class ApexMergeStage extends LightningElement {
                 throw new Error(parsed.error || 'Preview failed.');
             }
             this.previewData = parsed;
-            const hasConflict =
-                parsed.hasConflicts === true ||
-                (Array.isArray(parsed.conflicts) && parsed.conflicts.length);
-            if (hasConflict) {
-                this._setRowStatus(row.key, CLASS_STATUS.CONFLICT);
-            } else {
-                this._setRowStatus(row.key, CLASS_STATUS.RESOLVED);
-                this._dispatchBindingChange();
-            }
+            const effectiveMode = resolveMergeModeFromResponse(parsed, mode);
+            this._applyPreviewRowStatus(row.key, parsed, effectiveMode);
         } catch (error) {
             this._setRowStatus(row.key, CLASS_STATUS.FAILED, this._errorText(error));
             this._dispatchMergeError(this._errorText(error));
         } finally {
             this.isLoadingPreview = false;
+        }
+    }
+
+    async handleMethodAcceptSource(event) {
+        await this._resolveSingleMethod(
+            event,
+            METHOD_RESOLUTION_STRATEGY.ACCEPT_SOURCE
+        );
+    }
+
+    async handleMethodAcceptDestination(event) {
+        await this._resolveSingleMethod(
+            event,
+            METHOD_RESOLUTION_STRATEGY.ACCEPT_TARGET
+        );
+    }
+
+    async _resolveSingleMethod(event, strategy) {
+        if (this.isResolving) {
+            return;
+        }
+
+        const methodKey = event?.currentTarget?.dataset?.methodKey;
+        const row = this.selectedRow;
+
+        if (
+            !methodKey ||
+            !row ||
+            !this.mergeSessionId ||
+            !this.previewData ||
+            !this.isMethodMergePreview
+        ) {
+            return;
+        }
+
+        const previewSnapshot = JSON.parse(JSON.stringify(this.previewData));
+        this.isResolving = true;
+
+        try {
+            const raw = await resolveClassMerge({
+                comparisonId: this.comparisonId,
+                deploymentPlanId: this.deploymentPlanId,
+                mergeSessionId: this.mergeSessionId,
+                requestJson: JSON.stringify({
+                    metadataName: row.metadataName,
+                    methodResolutions: [
+                        buildMethodResolutionEntry(methodKey, strategy)
+                    ]
+                })
+            });
+            const parsed = this._parseJson(raw);
+            if (parsed?.success === false) {
+                throw new Error(parsed.error || 'Resolve failed.');
+            }
+
+            this.previewData = {
+                ...this.previewData,
+                ...parsed,
+                mergeMode: METHOD_MERGE_MODE,
+                mergedContent:
+                    parsed.mergedContent ??
+                    parsed.mergedPreview ??
+                    this.previewData.mergedContent
+            };
+
+            const effectiveMode = resolveMergeModeFromResponse(
+                parsed,
+                METHOD_MERGE_MODE
+            );
+            this._applyPreviewRowStatus(row.key, parsed, effectiveMode);
+        } catch (error) {
+            this.previewData = previewSnapshot;
+            if (classHasUnresolvedMethodConflicts(previewSnapshot)) {
+                this._setRowStatus(row.key, CLASS_STATUS.CONFLICT);
+            }
+            this._dispatchMergeError(this._errorText(error));
+        } finally {
+            this.isResolving = false;
         }
     }
 
@@ -281,16 +505,11 @@ export default class ApexMergeStage extends LightningElement {
                     parsed.mergedContent || parsed.mergedPreview || ''
             };
 
-            const stillHasConflict =
-                parsed.hasConflicts === true ||
-                (Array.isArray(parsed.conflicts) && parsed.conflicts.length);
-
-            if (stillHasConflict) {
-                this._setRowStatus(row.key, CLASS_STATUS.CONFLICT);
-            } else {
-                this._setRowStatus(row.key, CLASS_STATUS.RESOLVED);
-                this._dispatchBindingChange();
-            }
+            const effectiveMode = resolveMergeModeFromResponse(
+                parsed,
+                FULL_MERGE_MODE
+            );
+            this._applyPreviewRowStatus(row.key, parsed, effectiveMode);
         } catch (error) {
             this._setRowStatus(row.key, CLASS_STATUS.FAILED, this._errorText(error));
             this._dispatchMergeError(this._errorText(error));
@@ -299,11 +518,188 @@ export default class ApexMergeStage extends LightningElement {
         }
     }
 
-    async handleContinueToReview() {
-        if (!this.allClassesSealed || !this.mergeSessionId) {
+    _applyPreviewRowStatus(classKey, parsed, mode) {
+        const methodMode = mode === METHOD_MERGE_MODE;
+        const hasConflict = methodMode
+            ? classHasUnresolvedMethodConflicts(parsed)
+            : parsed.hasConflicts === true ||
+              (Array.isArray(parsed.conflicts) && parsed.conflicts.length);
+
+        if (hasConflict) {
+            this._setRowStatus(classKey, CLASS_STATUS.CONFLICT, null, {
+                mergeMode: mode
+            });
             return;
         }
 
+        this._setRowStatus(classKey, CLASS_STATUS.RESOLVED, null, {
+            mergeMode: mode
+        });
+        this._dispatchBindingChange();
+    }
+
+    async handleContinueToReview() {
+        if (
+            !this.allClassesSealed ||
+            !this.mergeSessionId ||
+            this._continueOperationInFlight
+        ) {
+            return;
+        }
+
+        this._continueOperationInFlight = true;
+
+        try {
+            const methodPublishNames =
+                collectMethodPublishMetadataNames(this.classRows);
+            const requiresPublish = methodPublishNames.length > 0;
+
+            if (requiresPublish && !this.sessionPublishConfirmed) {
+                await this._ensureMethodPublishComplete(methodPublishNames);
+            }
+
+            await this._sealMergeSessionAndComplete();
+        } catch (error) {
+            this._dispatchMergeError(this._errorText(error));
+        } finally {
+            this._continueOperationInFlight = false;
+        }
+    }
+
+    async _ensureMethodPublishComplete(metadataNames) {
+        if (!metadataNames?.length) {
+            return;
+        }
+
+        if (this.sessionPublishConfirmed) {
+            return;
+        }
+
+        this.isPublishing = true;
+
+        let parsed = null;
+
+        try {
+            const raw = await publishClassMerge({
+                comparisonId: this.comparisonId,
+                deploymentPlanId: this.deploymentPlanId,
+                mergeSessionId: this.mergeSessionId,
+                requestJson: JSON.stringify({
+                    metadataNames
+                })
+            });
+            parsed = this._parseJson(raw);
+
+            if (isPublishResponseConfirmed(parsed)) {
+                this._markSessionPublished(parsed.publishedCommitSha);
+                this._dispatchMergeSuccess(
+                    'Method merge published to the Source branch.'
+                );
+                return;
+            }
+
+            if (parsed?.success === false) {
+                const reconciled = await this._reconcilePublishViaSessionStatus();
+                if (reconciled) {
+                    return;
+                }
+                throw new Error(
+                    parsed.error ||
+                        parsed.code ||
+                        'Unable to publish method merge to Source.'
+                );
+            }
+
+            const reconciled = await this._reconcilePublishViaSessionStatus();
+            if (!reconciled) {
+                throw new Error(
+                    'Publish did not complete. Session status is unavailable or inconclusive.'
+                );
+            }
+        } catch (error) {
+            if (isPublishOutcomeAmbiguous(error, parsed)) {
+                const reconciled = await this._reconcilePublishViaSessionStatus();
+                if (reconciled) {
+                    return;
+                }
+                throw new Error(
+                    'Publish outcome is unknown. Could not confirm publication from the merge session.'
+                );
+            }
+
+            const reconciled = await this._reconcilePublishViaSessionStatus();
+            if (reconciled) {
+                return;
+            }
+
+            throw error;
+        } finally {
+            this.isPublishing = false;
+        }
+    }
+
+    async _reconcilePublishViaSessionStatus() {
+        const statusPayload = await this._fetchMergeSessionStatus();
+
+        if (!statusPayload) {
+            return false;
+        }
+
+        if (statusPayload.status === SESSION_STATUS.SEALED) {
+            throw new Error(
+                'Merge session is already sealed. Refresh the page and continue to Deployment Review if merge completed.'
+            );
+        }
+
+        if (isSessionPublishConfirmed(statusPayload)) {
+            const publish = statusPayload.publish || statusPayload;
+            this._markSessionPublished(publish.publishedCommitSha);
+            this._dispatchMergeSuccess(
+                'Publish confirmed from merge session status.'
+            );
+            return true;
+        }
+
+        return false;
+    }
+
+    async _fetchMergeSessionStatus() {
+        if (!this.mergeSessionId) {
+            return null;
+        }
+
+        try {
+            const raw = await getMergeSessionStatus({
+                mergeSessionId: this.mergeSessionId
+            });
+            const parsed = this._parseJson(raw);
+
+            if (!parsed) {
+                return null;
+            }
+
+            if (parsed.success === false && !parsed.publish) {
+                return null;
+            }
+
+            return parsed;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    _markSessionPublished(publishedCommitSha) {
+        if (
+            typeof publishedCommitSha !== 'string' ||
+            !publishedCommitSha.trim()
+        ) {
+            return;
+        }
+        this.sessionPublishConfirmed = true;
+        this.publishedCommitSha = publishedCommitSha.trim();
+    }
+
+    async _sealMergeSessionAndComplete() {
         this.isSealing = true;
 
         try {
@@ -337,14 +733,12 @@ export default class ApexMergeStage extends LightningElement {
                     }
                 })
             );
-        } catch (error) {
-            this._dispatchMergeError(this._errorText(error));
         } finally {
             this.isSealing = false;
         }
     }
 
-    _setRowStatus(key, status, errorMessage) {
+    _setRowStatus(key, status, errorMessage, options = {}) {
         const statusLabels = {
             [CLASS_STATUS.PENDING]: { label: 'Pending', cls: 'slds-theme_warning' },
             [CLASS_STATUS.PREVIEWING]: {
@@ -363,17 +757,26 @@ export default class ApexMergeStage extends LightningElement {
         };
 
         const meta = statusLabels[status] || statusLabels[CLASS_STATUS.PENDING];
+        const nextMergeMode = options?.mergeMode;
 
         this.classRows = this.classRows.map((row) => {
             if (row.key !== key) {
                 return row;
             }
+
+            const mergeMode =
+                nextMergeMode === METHOD_MERGE_MODE ||
+                nextMergeMode === FULL_MERGE_MODE
+                    ? nextMergeMode
+                    : row.mergeMode;
+
             return {
                 ...row,
                 status,
                 statusLabel: meta.label,
                 badgeClass: `slds-badge ${meta.cls}`,
-                errorMessage: errorMessage || null
+                errorMessage: errorMessage || null,
+                mergeMode
             };
         });
     }
@@ -400,6 +803,17 @@ export default class ApexMergeStage extends LightningElement {
                 title: 'Apex Merge',
                 message,
                 variant: 'error',
+                mode: 'dismissable'
+            })
+        );
+    }
+
+    _dispatchMergeSuccess(message) {
+        this.dispatchEvent(
+            new ShowToastEvent({
+                title: 'Apex Merge',
+                message,
+                variant: 'success',
                 mode: 'dismissable'
             })
         );

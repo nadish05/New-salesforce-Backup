@@ -108,13 +108,6 @@ private class ApexMergeControllerTest {
 
     @IsTest
     static void previewClassMerge_postsPreviewSubresource() {
-        MergeCaptureMock mock = new MergeCaptureMock(
-            200,
-            '{"success":true,"status":"PREVIEWED"}'
-        );
-        Test.setMock(HttpCalloutMock.class, mock);
-
-        Test.startTest();
         Id comparisonId = seedComparisonAndPlan();
         Deployment_Plan__c plan = [
             SELECT Id
@@ -123,6 +116,13 @@ private class ApexMergeControllerTest {
             LIMIT 1
         ];
 
+        MergeCaptureMock mock = new MergeCaptureMock(
+            200,
+            '{"success":true,"status":"PREVIEWED"}'
+        );
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
         String result = ApexMergeController.previewClassMerge(
             comparisonId,
             plan.Id,
@@ -136,6 +136,269 @@ private class ApexMergeControllerTest {
             mock.endpoint.endsWith('/sess_preview/preview'),
             mock.endpoint
         );
+    }
+
+    @IsTest
+    static void resolveClassMerge_postsResolveSubresource() {
+        Id comparisonId = seedComparisonAndPlan();
+        Deployment_Plan__c plan = [
+            SELECT Id
+            FROM Deployment_Plan__c
+            WHERE Metadata_Comparison__c = :comparisonId
+            LIMIT 1
+        ];
+
+        MergeCaptureMock mock = new MergeCaptureMock(
+            200,
+            '{"success":true,"status":"RESOLVED"}'
+        );
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        String result = ApexMergeController.resolveClassMerge(
+            comparisonId,
+            plan.Id,
+            'sess_resolve',
+            '{"metadataName":"Foo","mode":"FULL","resolutionStrategy":"ACCEPT_SOURCE"}'
+        );
+        Test.stopTest();
+
+        System.assert(result.contains('RESOLVED'), result);
+        System.assert(
+            mock.endpoint.endsWith('/sess_resolve/resolve'),
+            mock.endpoint
+        );
+        System.assertEquals('POST', mock.method);
+    }
+
+    @IsTest
+    static void publishClassMerge_success_postsPublishSubresource() {
+        Id comparisonId = seedComparisonAndPlan();
+        Deployment_Plan__c plan = [
+            SELECT Id
+            FROM Deployment_Plan__c
+            WHERE Metadata_Comparison__c = :comparisonId
+            LIMIT 1
+        ];
+
+        String backendResponse =
+            '{"success":true,"publishState":"PUBLISHED","publishedCommitSha":"abc123def456",' +
+            '"publishedAt":"2026-11-17T10:00:00.000Z",' +
+            '"publishedClasses":[{"metadataName":"WeatherService","filePath":"force-app/main/default/classes/WeatherService.cls"}],' +
+            '"inputMergePins":{"sourceHeadSha":"abc123def456","destinationHeadSha":"dst000"}}';
+
+        MergeCaptureMock mock = new MergeCaptureMock(200, backendResponse);
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        String result = ApexMergeController.publishClassMerge(
+            comparisonId,
+            plan.Id,
+            'sess_publish',
+            '{"metadataNames":["WeatherService"]}'
+        );
+        Test.stopTest();
+
+        System.assert(
+            mock.endpoint.endsWith('/sess_publish/publish'),
+            'Publish endpoint: ' + mock.endpoint
+        );
+        System.assertEquals('POST', mock.method);
+
+        Map<String, Object> req =
+            (Map<String, Object>) JSON.deserializeUntyped(mock.body);
+        System.assertEquals(String.valueOf(comparisonId), req.get('comparisonId'));
+        System.assertEquals(String.valueOf(plan.Id), req.get('deploymentPlanId'));
+        List<Object> names = (List<Object>) req.get('metadataNames');
+        System.assertEquals(1, names.size());
+        System.assertEquals('WeatherService', names[0]);
+        System.assert(
+            !req.containsKey('refreshToken'),
+            'Publish must not attach destination credentials'
+        );
+        System.assert(
+            !req.containsKey('repoUrl'),
+            'Publish must not accept client repoUrl'
+        );
+
+        Map<String, Object> parsed =
+            (Map<String, Object>) JSON.deserializeUntyped(result);
+        System.assertEquals(true, parsed.get('success'));
+        System.assertEquals('PUBLISHED', parsed.get('publishState'));
+        System.assertEquals(
+            'abc123def456',
+            parsed.get('publishedCommitSha'),
+            'publishedCommitSha must reach caller'
+        );
+        System.assert(
+            result.contains('WeatherService'),
+            'publishedClasses must be preserved'
+        );
+    }
+
+    @IsTest
+    static void publishClassMerge_staleSourceHead_returnsBackendErrorBody() {
+        Id comparisonId = seedComparisonAndPlan();
+        Deployment_Plan__c plan = [
+            SELECT Id
+            FROM Deployment_Plan__c
+            WHERE Metadata_Comparison__c = :comparisonId
+            LIMIT 1
+        ];
+
+        String errorBody =
+            '{"success":false,"code":"STALE_GIT_PINS","error":"Git branch HEAD SHAs changed since session creation."}';
+        MergeCaptureMock mock = new MergeCaptureMock(409, errorBody);
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        String result = ApexMergeController.publishClassMerge(
+            comparisonId,
+            plan.Id,
+            'sess_stale',
+            '{"metadataNames":["WeatherService"]}'
+        );
+        Test.stopTest();
+
+        System.assert(result.contains('STALE_GIT_PINS'), result);
+        System.assert(result.contains('HEAD SHAs changed'), result);
+        Map<String, Object> parsed =
+            (Map<String, Object>) JSON.deserializeUntyped(result);
+        System.assertNotEquals(true, parsed.get('success'));
+    }
+
+    @IsTest
+    static void publishClassMerge_unresolvedConflict_returnsBackendErrorBody() {
+        Id comparisonId = seedComparisonAndPlan();
+        Deployment_Plan__c plan = [
+            SELECT Id
+            FROM Deployment_Plan__c
+            WHERE Metadata_Comparison__c = :comparisonId
+            LIMIT 1
+        ];
+
+        String errorBody =
+            '{"success":false,"code":"UNRESOLVED_CONFLICT","error":"Missing resolution for WeatherService."}';
+        MergeCaptureMock mock = new MergeCaptureMock(400, errorBody);
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        String result = ApexMergeController.publishClassMerge(
+            comparisonId,
+            plan.Id,
+            'sess_unresolved',
+            '{"metadataNames":["WeatherService"]}'
+        );
+        Test.stopTest();
+
+        System.assert(result.contains('UNRESOLVED_CONFLICT'), result);
+        System.assert(
+            !result.contains('"success":true'),
+            'Must not report success on unresolved conflict'
+        );
+    }
+
+    @IsTest
+    static void publishClassMerge_backendHttpError_preservesStatus() {
+        Id comparisonId = seedComparisonAndPlan();
+        Deployment_Plan__c plan = [
+            SELECT Id
+            FROM Deployment_Plan__c
+            WHERE Metadata_Comparison__c = :comparisonId
+            LIMIT 1
+        ];
+
+        MergeCaptureMock mock = new MergeCaptureMock(
+            503,
+            '{"success":false,"error":"Backend unavailable"}'
+        );
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        String result = ApexMergeController.publishClassMerge(
+            comparisonId,
+            plan.Id,
+            'sess_503',
+            '{"metadataNames":["WeatherService"]}'
+        );
+        Test.stopTest();
+
+        System.assert(result.contains('Backend unavailable'), result);
+    }
+
+    @IsTest
+    static void publishClassMerge_backendHttpError_emptyBody_returnsFallbackJson() {
+        Id comparisonId = seedComparisonAndPlan();
+        Deployment_Plan__c plan = [
+            SELECT Id
+            FROM Deployment_Plan__c
+            WHERE Metadata_Comparison__c = :comparisonId
+            LIMIT 1
+        ];
+
+        MergeCaptureMock mock = new MergeCaptureMock(502, '');
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        String result = ApexMergeController.publishClassMerge(
+            comparisonId,
+            plan.Id,
+            'sess_502',
+            '{"metadataNames":["WeatherService"]}'
+        );
+        Test.stopTest();
+
+        Map<String, Object> parsed =
+            (Map<String, Object>) JSON.deserializeUntyped(result);
+        System.assertEquals(false, parsed.get('success'));
+        System.assertEquals(502, parsed.get('statusCode'));
+    }
+
+    @IsTest
+    static void publishClassMerge_wrongComparison_throws() {
+        Id comparisonId = seedComparisonAndPlan();
+        Id otherComparisonId = seedComparisonOnly();
+        Deployment_Plan__c plan = [
+            SELECT Id
+            FROM Deployment_Plan__c
+            WHERE Metadata_Comparison__c = :comparisonId
+            LIMIT 1
+        ];
+
+        Boolean thrown = false;
+        try {
+            ApexMergeController.publishClassMerge(
+                otherComparisonId,
+                plan.Id,
+                'sess_bad',
+                '{"metadataNames":["WeatherService"]}'
+            );
+        } catch (AuraHandledException e) {
+            thrown = true;
+        }
+        System.assert(thrown, 'Expected plan/comparison mismatch to throw');
+    }
+
+    @IsTest
+    static void publishClassMerge_blankSessionId_returnsFailureJson() {
+        Id comparisonId = seedComparisonAndPlan();
+        Deployment_Plan__c plan = [
+            SELECT Id
+            FROM Deployment_Plan__c
+            WHERE Metadata_Comparison__c = :comparisonId
+            LIMIT 1
+        ];
+
+        Test.startTest();
+        String result = ApexMergeController.publishClassMerge(
+            comparisonId,
+            plan.Id,
+            '',
+            '{"metadataNames":["WeatherService"]}'
+        );
+        Test.stopTest();
+
+        System.assert(result.contains('mergeSessionId is required'), result);
     }
 
     @IsTest
