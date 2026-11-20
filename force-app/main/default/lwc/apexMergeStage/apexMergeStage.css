@@ -73,6 +73,15 @@
     gap: 0.5rem;
 }
 
+.declaration-value-grid {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.declaration-sharing-warning {
+    margin-top: 0.25rem;
+}
+
 .method-name {
     font-weight: 600;
 }

@@ -47,11 +47,11 @@ export function classHasUnresolvedMethodConflicts(previewData) {
     if (!isMethodMergePreview(previewData)) {
         return false;
     }
-    if (previewData.resolved === true) {
-        return false;
-    }
     if (typeof previewData.conflictCount === 'number') {
         return previewData.conflictCount > 0;
+    }
+    if (previewData.resolved === true) {
+        return false;
     }
     return previewData.hasConflicts === true;
 }

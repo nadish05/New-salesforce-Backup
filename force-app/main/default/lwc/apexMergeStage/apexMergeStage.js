@@ -14,9 +14,16 @@ import {
     buildMethodResolutionEntry,
     classHasUnresolvedMethodConflicts,
     isFullMergePreview,
-    isMethodMergePreview,
-    methodPreviewHasResolvedMethods
+    isMethodMergePreview
 } from './apexMergeMethodInventory';
+import {
+    DECLARATION_RESOLUTION_SIDE,
+    buildDeclarationResolutionEntry,
+    buildDeclarationRows,
+    classHasUnresolvedMethodOrDeclarationConflicts,
+    methodMergePreviewFullyResolved,
+    previewRequiresRepreviewConfirmation
+} from './apexMergeDeclarationInventory';
 import {
     collectMethodPublishMetadataNames,
     isPublishOutcomeAmbiguous,
@@ -191,9 +198,21 @@ export default class ApexMergeStage extends LightningElement {
         return (
             this.hasPreview &&
             this.isMethodMergePreview &&
-            this.previewData?.resolved === true &&
+            methodMergePreviewFullyResolved(this.previewData) &&
             Boolean(this.mergedPreviewText)
         );
+    }
+
+    get showDeclarationSection() {
+        return (
+            this.hasPreview &&
+            this.isMethodMergePreview &&
+            Boolean(this.previewData?.declarations)
+        );
+    }
+
+    get declarationRows() {
+        return buildDeclarationRows(this.previewData?.declarations);
     }
 
     get methodInventoryRows() {
@@ -224,16 +243,28 @@ export default class ApexMergeStage extends LightningElement {
         if (!this.isMethodMergePreview) {
             return '';
         }
-        const count = this.previewData?.conflictCount;
-        const conflictPart =
-            typeof count === 'number'
-                ? `${count} method conflict${count === 1 ? '' : 's'}`
-                : this.hasConflicts
-                  ? `${this.conflictItems.length} method conflict(s)`
-                  : 'No method conflicts';
-        const resolved =
-            this.previewData?.resolved === true ? ' — merge resolved' : '';
-        return `Method merge preview: ${conflictPart}${resolved}`;
+        const methodCount = this.previewData?.conflictCount;
+        const methodPart =
+            typeof methodCount === 'number'
+                ? `${methodCount} method conflict${methodCount === 1 ? '' : 's'}`
+                : 'No method conflicts';
+        const declCount = this.previewData?.declarationConflictCount;
+        const declPart =
+            typeof declCount === 'number' && declCount > 0
+                ? `${declCount} declaration conflict${declCount === 1 ? '' : 's'}`
+                : null;
+        const parts = [methodPart];
+        if (declPart) {
+            parts.push(declPart);
+        }
+        const resolved = methodMergePreviewFullyResolved(this.previewData)
+            ? ' — ready to continue'
+            : '';
+        return `Method merge preview: ${parts.join('; ')}${resolved}`;
+    }
+
+    get repreviewConfirmMessage() {
+        return 'Re-previewing will replace the current comparison and clear existing method and class declaration resolutions. Continue?';
     }
 
     _syncClassRows() {
@@ -350,7 +381,7 @@ export default class ApexMergeStage extends LightningElement {
     }
 
     _shouldConfirmMethodRepreview() {
-        return methodPreviewHasResolvedMethods(this.previewData);
+        return previewRequiresRepreviewConfirmation(this.previewData);
     }
 
     async _previewClassMerge(mode) {
@@ -400,6 +431,93 @@ export default class ApexMergeStage extends LightningElement {
             event,
             METHOD_RESOLUTION_STRATEGY.ACCEPT_TARGET
         );
+    }
+
+    async handleDeclarationAcceptSource(event) {
+        const conflictKey = event?.currentTarget?.dataset?.conflictKey;
+        if (!conflictKey) {
+            return;
+        }
+        await this._resolveSingleDeclaration(
+            conflictKey,
+            DECLARATION_RESOLUTION_SIDE.SOURCE
+        );
+    }
+
+    async handleDeclarationAcceptDestination(event) {
+        const conflictKey = event?.currentTarget?.dataset?.conflictKey;
+        if (!conflictKey) {
+            return;
+        }
+        await this._resolveSingleDeclaration(
+            conflictKey,
+            DECLARATION_RESOLUTION_SIDE.DESTINATION
+        );
+    }
+
+    async _resolveSingleDeclaration(conflictKey, side) {
+        if (this.isResolving) {
+            return;
+        }
+
+        const row = this.selectedRow;
+
+        if (
+            !conflictKey ||
+            !row ||
+            !this.mergeSessionId ||
+            !this.previewData ||
+            !this.isMethodMergePreview
+        ) {
+            return;
+        }
+
+        const previewSnapshot = JSON.parse(JSON.stringify(this.previewData));
+        this.isResolving = true;
+
+        try {
+            const raw = await resolveClassMerge({
+                comparisonId: this.comparisonId,
+                deploymentPlanId: this.deploymentPlanId,
+                mergeSessionId: this.mergeSessionId,
+                requestJson: JSON.stringify({
+                    metadataName: row.metadataName,
+                    declarationResolutions: [
+                        buildDeclarationResolutionEntry(conflictKey, side)
+                    ]
+                })
+            });
+            const parsed = this._parseJson(raw);
+            if (parsed?.success === false) {
+                throw new Error(parsed.error || 'Resolve failed.');
+            }
+
+            this.previewData = {
+                ...this.previewData,
+                ...parsed,
+                mergeMode: METHOD_MERGE_MODE,
+                mergedContent:
+                    parsed.mergedContent ??
+                    parsed.mergedPreview ??
+                    previewSnapshot.mergedContent
+            };
+
+            const effectiveMode = resolveMergeModeFromResponse(
+                parsed,
+                METHOD_MERGE_MODE
+            );
+            this._applyPreviewRowStatus(row.key, parsed, effectiveMode);
+        } catch (error) {
+            this.previewData = previewSnapshot;
+            if (
+                classHasUnresolvedMethodOrDeclarationConflicts(previewSnapshot)
+            ) {
+                this._setRowStatus(row.key, CLASS_STATUS.CONFLICT);
+            }
+            this._dispatchMergeError(this._errorText(error));
+        } finally {
+            this.isResolving = false;
+        }
     }
 
     async _resolveSingleMethod(event, strategy) {
@@ -457,7 +575,9 @@ export default class ApexMergeStage extends LightningElement {
             this._applyPreviewRowStatus(row.key, parsed, effectiveMode);
         } catch (error) {
             this.previewData = previewSnapshot;
-            if (classHasUnresolvedMethodConflicts(previewSnapshot)) {
+            if (
+                classHasUnresolvedMethodOrDeclarationConflicts(previewSnapshot)
+            ) {
                 this._setRowStatus(row.key, CLASS_STATUS.CONFLICT);
             }
             this._dispatchMergeError(this._errorText(error));
@@ -521,7 +641,7 @@ export default class ApexMergeStage extends LightningElement {
     _applyPreviewRowStatus(classKey, parsed, mode) {
         const methodMode = mode === METHOD_MERGE_MODE;
         const hasConflict = methodMode
-            ? classHasUnresolvedMethodConflicts(parsed)
+            ? classHasUnresolvedMethodOrDeclarationConflicts(parsed)
             : parsed.hasConflicts === true ||
               (Array.isArray(parsed.conflicts) && parsed.conflicts.length);
 

@@ -189,6 +189,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeclarationMergeTest</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>DemoModifiedClass</apexClass>
         <enabled>true</enabled>
     </classAccesses>
