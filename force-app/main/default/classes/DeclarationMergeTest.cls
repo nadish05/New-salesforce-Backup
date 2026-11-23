@@ -1,4 +1,4 @@
-public without sharing class DeclarationMergeTest {
+global without sharing class DeclarationMergeTest {
 
     public class Helper {
         public String getValue() {
@@ -12,9 +12,5 @@ public without sharing class DeclarationMergeTest {
 
     public String getSourceMessage() {
         return 'Message from Source Org';
-    }
-
-    public String getDestinationMessage() {
-        return 'Message from Destination Org';
     }
 }
