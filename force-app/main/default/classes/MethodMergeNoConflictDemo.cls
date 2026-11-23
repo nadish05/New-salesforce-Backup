@@ -5,7 +5,7 @@ public with sharing class MethodMergeNoConflictDemo {
     }
 
     public static Decimal calculateDiscount(Decimal amount) {
-        return amount * 0.15;
+        return amount * 0.10;
     }
 
     public static String getStatus() {
@@ -14,9 +14,5 @@ public with sharing class MethodMergeNoConflictDemo {
 
     public static String getSourceMessage() {
         return 'This method was added in Source Org';
-    }
-
-    public static String getDestinationMessage() {
-        return 'This method was added in Destination Org';
     }
 }
